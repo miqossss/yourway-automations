@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.body.lessonId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/lessons/{{ $json.body.lessonId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "options": {}
@@ -108,7 +108,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/answers/{{ $json.answerId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/answers/{{ $json.answerId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -134,7 +134,7 @@
     },
     {
       "parameters": {
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $('Parsuj Ocenę Jakościową').item.json.taskId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/tasks/{{ $('Parsuj Ocenę Jakościową').item.json.taskId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "options": {}
@@ -183,7 +183,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $json.taskId }}?updateMask.fieldPaths=status&updateMask.fieldPaths=quizStatus&updateMask.fieldPaths=answeredCount&updateMask.fieldPaths=noteUnlocked&updateMask.fieldPaths=exercisesUnlocked",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/tasks/{{ $json.taskId }}?updateMask.fieldPaths=status&updateMask.fieldPaths=quizStatus&updateMask.fieldPaths=answeredCount&updateMask.fieldPaths=noteUnlocked&updateMask.fieldPaths=exercisesUnlocked",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -242,7 +242,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents:runQuery",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents:runQuery",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -357,7 +357,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/studentKnowledgeReports/{{ $json.reportId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/studentKnowledgeReports/{{ $json.reportId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,

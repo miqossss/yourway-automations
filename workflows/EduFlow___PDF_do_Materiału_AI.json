@@ -193,7 +193,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.docId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/lessons/{{ $json.docId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -219,7 +219,7 @@
     },
     {
       "parameters": {
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/classes/{{ $('Parsuj Lekcję GPT').item.json.classId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/classes/{{ $('Parsuj Lekcję GPT').item.json.classId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "options": {}
@@ -255,7 +255,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $json.taskId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/tasks/{{ $json.taskId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -334,7 +334,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/materials/{{ $json.docId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/materials/{{ $json.docId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,

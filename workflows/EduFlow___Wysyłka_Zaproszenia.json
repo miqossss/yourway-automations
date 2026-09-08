@@ -65,7 +65,7 @@
     },
     {
       "parameters": {
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/invitations/{{ $json.invitationId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/invitations/{{ $json.invitationId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "options": {
@@ -181,7 +181,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/invitations/{{ $json.invitationId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/invitations/{{ $json.invitationId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -247,7 +247,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/invitations/{{ $json.invitationId }}?updateMask.fieldPaths=emailStatus&updateMask.fieldPaths=sentAt&updateMask.fieldPaths=sendAttempts&updateMask.fieldPaths=lastAttemptAt&updateMask.fieldPaths=failReason&updateMask.fieldPaths=updatedAt",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/invitations/{{ $json.invitationId }}?updateMask.fieldPaths=emailStatus&updateMask.fieldPaths=sentAt&updateMask.fieldPaths=sendAttempts&updateMask.fieldPaths=lastAttemptAt&updateMask.fieldPaths=failReason&updateMask.fieldPaths=updatedAt",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,

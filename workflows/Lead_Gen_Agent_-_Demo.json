@@ -314,7 +314,7 @@
             {
               "id": "cfg3",
               "name": "chatInput",
-              "value": "[AUTOMATYCZNY RUN - BEZ NADZORU CZLOWIEKA] Wykonaj caly research samodzielnie, od poczatku do konca, bez zadawania jakichkolwiek pytan i bez czekania na potwierdzenie - nikt nie odpowie w tej sesji. Kryteria: branza = detailing samochodowy, lokalizacja = Krakow, docelowa liczba firm = 10. Po zebraniu i ocenie firm wykonaj wszystkie kroki az do konca: sprawdzenie stron, dane z Google Maps, probe enrichmentu kontaktu przez Hunter, drafty maili, zapis do arkusza, i na koniec wyslij podsumowanie mailem na adres: mikziop348@gmail.com. Traktuj liste jako automatycznie zaakceptowana - nie pytaj o potwierdzenie ani o adres e-mail, uzyj podanego wyzej.",
+              "value": "[AUTOMATYCZNY RUN - BEZ NADZORU CZLOWIEKA] Wykonaj caly research samodzielnie, od poczatku do konca, bez zadawania jakichkolwiek pytan i bez czekania na potwierdzenie - nikt nie odpowie w tej sesji. Kryteria: branza = detailing samochodowy, lokalizacja = Krakow, docelowa liczba firm = 10. Po zebraniu i ocenie firm wykonaj wszystkie kroki az do konca: sprawdzenie stron, dane z Google Maps, probe enrichmentu kontaktu przez Hunter, drafty maili, zapis do arkusza, i na koniec wyslij podsumowanie mailem na adres: twoj-email@przyklad.pl. Traktuj liste jako automatycznie zaakceptowana - nie pytaj o potwierdzenie ani o adres e-mail, uzyj podanego wyzej.",
               "type": "string"
             }
           ]

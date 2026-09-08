@@ -153,17 +153,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "1cr6vDXnACsi1jAyoLL-npwmXjR5EF1qf3vryn5MqdGU",
+          "value": "YOUR_GOOGLE_SHEET_ID",
           "mode": "list",
           "cachedResultName": "Fotowoltaika",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cr6vDXnACsi1jAyoLL-npwmXjR5EF1qf3vryn5MqdGU/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Arkusz1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cr6vDXnACsi1jAyoLL-npwmXjR5EF1qf3vryn5MqdGU/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",

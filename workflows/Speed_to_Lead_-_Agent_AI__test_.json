@@ -200,7 +200,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=Goracy lead z formularza!\n\nImie: {{ $(\"Normalizuj dane leada\").item.json.imie_nazwisko }}\nFirma: {{ $(\"Normalizuj dane leada\").item.json.firma }}\nTelefon: {{ $(\"Normalizuj dane leada\").item.json.telefon }}\nEmail: {{ $(\"Normalizuj dane leada\").item.json.email }}\nCel: {{ $(\"Normalizuj dane leada\").item.json.cel }}\nWiadomosc: {{ $(\"Normalizuj dane leada\").item.json.wiadomosc }}\n\nOcena AI - priorytet: {{ $json.output.priorytet }}\nUzasadnienie: {{ $json.output.uzasadnienie }}",
         "additionalFields": {
           "appendAttribution": false

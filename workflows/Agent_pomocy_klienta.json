@@ -289,7 +289,7 @@
     },
     {
       "parameters": {
-        "chatId": "=7912263345",
+        "chatId": "=YOUR_TELEGRAM_CHAT_ID",
         "text": "={{ $json.output }}",
         "additionalFields": {
           "appendAttribution": false
@@ -313,7 +313,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=Otrzymałeś wiadomość e-mail o {{ $now.format('hh:mm') }} o treści:\n\n{{ $('Set Content').item.json.emailBody }}",
         "additionalFields": {
           "appendAttribution": false

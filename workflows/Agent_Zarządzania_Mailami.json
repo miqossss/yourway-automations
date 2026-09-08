@@ -78,7 +78,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=🔴 Wysoki Priorytet!  \nOd: {{ $(\"Gmail Trigger\").item.json.from.text }}\nTemat: {{ $(\"Gmail Trigger\").item.json.subject }}\nPodsumowanie: {{ $(\"Wersja robocza\").item.json.message.content.Temat }} - {{ $(\"Wersja robocza\").item.json.message.content[\"Wiadomość\"] }}",
         "additionalFields": {}
       },
@@ -100,7 +100,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=✅ Obsługa Klienta  \nOd: {{ $(\"Gmail Trigger\").item.json.from.text }}\nTemat: {{ $(\"Gmail Trigger\").item.json.subject }}\nAutomatyczna odpowiedź została wysłana.",
         "additionalFields": {}
       },
@@ -122,7 +122,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=📢 Promocja\n\nOd: {{ $(\"Gmail Trigger\").item.json.from.text }}\nTemat: {{ $(\"Gmail Trigger\").item.json.subject }}\nPodsumowanie: {{ $(\"Podsumowanie\").item.json.message.content.Podsumowanie }}\nRekomendacja: {{ $(\"Podsumowanie\").item.json.message.content.Rekomendacja }}",
         "additionalFields": {}
       },
@@ -144,7 +144,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=💰 Finanse\n\nOd: {{ $(\"Gmail Trigger\").item.json.from.text }}\nTemat: {{ $(\"Gmail Trigger\").item.json.subject }}\nEmail przekazany do działu finansów.",
         "additionalFields": {}
       },
@@ -456,7 +456,7 @@
     },
     {
       "parameters": {
-        "sendTo": "mikziop348@gmail.com",
+        "sendTo": "twoj-email@przyklad.pl",
         "subject": "={{ $json.message.content.Subject }}",
         "emailType": "text",
         "message": "={{ $json.message.content.Message }}",

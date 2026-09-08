@@ -298,7 +298,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.lessonId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/lessons/{{ $json.lessonId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -407,7 +407,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.lessonId }}?updateMask.fieldPaths=flashcards&updateMask.fieldPaths=quickCheck&updateMask.fieldPaths=openTasks",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/lessons/{{ $json.lessonId }}?updateMask.fieldPaths=flashcards&updateMask.fieldPaths=quickCheck&updateMask.fieldPaths=openTasks",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -432,7 +432,7 @@
     },
     {
       "parameters": {
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/classes/{{ $('Parsuj i Zapisz Cwiczenia').item.json.classId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/classes/{{ $('Parsuj i Zapisz Cwiczenia').item.json.classId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "options": {}
@@ -503,7 +503,7 @@
     },
     {
       "parameters": {
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/student_profiles/{{ $json.studentId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/student_profiles/{{ $json.studentId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "options": {
@@ -549,7 +549,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $json.taskId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/tasks/{{ $json.taskId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
@@ -592,7 +592,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessonAnalytics/{{ $json.analyticsId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/lessonAnalytics/{{ $json.analyticsId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,

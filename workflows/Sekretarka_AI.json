@@ -134,9 +134,9 @@
         "resource": "calendar",
         "calendar": {
           "__rl": true,
-          "value": "mikziop348@gmail.com",
+          "value": "twoj-email@przyklad.pl",
           "mode": "list",
-          "cachedResultName": "mikziop348@gmail.com"
+          "cachedResultName": "twoj-email@przyklad.pl"
         },
         "timeMin": "={{ $json.startTime }}",
         "timeMax": "={{ $json.endTime }}",
@@ -163,9 +163,9 @@
       "parameters": {
         "calendar": {
           "__rl": true,
-          "value": "mikziop348@gmail.com",
+          "value": "twoj-email@przyklad.pl",
           "mode": "list",
-          "cachedResultName": "mikziop348@gmail.com"
+          "cachedResultName": "twoj-email@przyklad.pl"
         },
         "start": "={{ $json.startTime }}",
         "end": "={{ $json.endTime }}",
@@ -380,7 +380,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=🔥 HOT LEAD!\n\nKlient: {{ $(\"Analyze Conversation\").item.json.output.customerName }}\nTelefon: {{ $(\"Analyze Conversation\").item.json.output.customerPhone }}\nEmail: {{ $(\"Analyze Conversation\").item.json.output.customerEmail }}\n\nTemat: {{ $(\"Analyze Conversation\").item.json.output.inquiryTopic }}\nPodsumowanie: {{ $(\"Analyze Conversation\").item.json.output.summary }}\n\nNastępne kroki: {{ $(\"Analyze Conversation\").item.json.output.nextSteps }}",
         "additionalFields": {
           "appendAttribution": false

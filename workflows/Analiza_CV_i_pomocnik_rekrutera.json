@@ -339,7 +339,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "={{ $json.message }}",
         "additionalFields": {
           "disable_web_page_preview": false,
@@ -364,7 +364,7 @@
     },
     {
       "parameters": {
-        "chatId": "7912263345",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
         "text": "=📧 *Email bez załącznika CV*\n\n*Temat:* {{ $json.subject }}\n*Od:* {{ $json.from }}\n*Data:* {{ $json.date }}",
         "additionalFields": {
           "parse_mode": "Markdown"

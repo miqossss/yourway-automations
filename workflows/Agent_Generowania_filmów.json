@@ -7,7 +7,7 @@
           "message"
         ],
         "additionalFields": {
-          "chatIds": "7912263345"
+          "chatIds": "YOUR_TELEGRAM_CHAT_ID"
         }
       },
       "type": "n8n-nodes-base.telegramTrigger",
@@ -141,7 +141,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/nowy-projekt-492511/locations/us-central1/publishers/google/models/veo-3.0-generate-preview:predictLongRunning",
+        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_GCP_PROJECT_ID/locations/us-central1/publishers/google/models/veo-3.0-generate-preview:predictLongRunning",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendHeaders": true,

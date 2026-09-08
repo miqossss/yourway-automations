@@ -86,7 +86,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/exerciseAttempts/{{ $json.attemptId }}",
+        "url": "=https://firestore.googleapis.com/v1/projects/YOUR_FIREBASE_PROJECT_ID/databases/(default)/documents/exerciseAttempts/{{ $json.attemptId }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googleApi",
         "sendBody": true,
