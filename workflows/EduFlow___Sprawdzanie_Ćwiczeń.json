@@ -1,0 +1,208 @@
+{
+  "name": "EduFlow — Sprawdzanie Ćwiczeń",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduflow-check-exercise",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7c2f29c6-f6d3-4e1d-8bb0-9fa296278c52",
+      "name": "Webhook — Sprawdź Ćwiczenie",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "424c86d5-68d7-4261-a345-9452a8dd0ebc"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes nauczycielem sprawdzajacym krotkie cwiczenie ucznia w aplikacji EduFlow. Odpowiadasz WYLACZNIE poprawnym JSON bez markdown, bez komentarzy, bez tekstu przed ani po JSON."
+            },
+            {
+              "content": "=Tytul lekcji:\n{{ $json.body.lessonTitle }}\n\nTyp cwiczenia:\n{{ $json.body.mode }}\n\nPytanie lub polecenie:\n{{ $json.body.question }}\n\nWzorcowa odpowiedz, jesli istnieje:\n{{ $json.body.expectedAnswer }}\n\nWskazowka, jesli istnieje:\n{{ $json.body.hint }}\n\nOdpowiedz ucznia:\n{{ $json.body.userAnswer }}\n\nNotatka lekcji jako kontekst:\n{{ $json.body.note }}\n\nOcen odpowiedz ucznia. Zwroc WYLACZNIE JSON:\n{\"correct\":true,\"score\":0-100,\"feedback\":\"Krotki feedback dla ucznia po polsku, max 2 zdania.\",\"suggestion\":\"Jedna konkretna wskazowka albo kolejny krok, max 1 zdanie.\"}\n\nZasady:\n- correct: true tylko jesli odpowiedz poprawna lub prawie poprawna\n- correct: false jesli bledna, pusta lub nie odpowiada na pytanie\n- Jezeli czescciowo poprawna: correct=false, score 50-75\n- Jezeli expectedAnswer puste, oceniaj na podstawie note i question\n- Nie wymyslaj informacji spoza notatki\n- Pisz bezposrednio do ucznia, prostym jezykiem"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 400,
+          "temperature": 0.3
+        }
+      },
+      "id": "bce278c9-b7a0-4a21-8151-3a825896ef8a",
+      "name": "GPT — Ocen Cwiczenie",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        -160
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nif (!rawText && item.message && item.message.content) { rawText = String(item.message.content); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nif (!parsed) { parsed = { correct: false, score: 0, feedback: 'Nie udalo sie ocenic odpowiedzi.', suggestion: 'Sprobuj ponownie.' }; }\nconst body = $('Webhook — Sprawdź Ćwiczenie').first().json.body;\nconst attemptId = 'attempt_' + body.studentId + '_' + Date.now();\nreturn [{ json: {\n  attemptId, studentId: body.studentId, taskId: body.taskId,\n  lessonId: body.lessonId, mode: body.mode, question: body.question,\n  expectedAnswer: body.expectedAnswer || '', userAnswer: body.userAnswer,\n  correct: parsed.correct === true,\n  score: typeof parsed.score === 'number' ? parsed.score : 0,\n  feedback: String(parsed.feedback || ''),\n  suggestion: String(parsed.suggestion || ''),\n  createdAt: new Date().toISOString()\n}}];"
+      },
+      "id": "1d9df5d4-58cb-498a-a209-a7d3f5496f85",
+      "name": "Parsuj Ocenę Ćwiczenia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst firestoreBody = JSON.stringify({ fields: {\n  attemptId: { stringValue: d.attemptId },\n  studentId: { stringValue: d.studentId },\n  taskId: { stringValue: d.taskId },\n  lessonId: { stringValue: d.lessonId },\n  mode: { stringValue: d.mode },\n  question: { stringValue: d.question },\n  expectedAnswer: { stringValue: d.expectedAnswer },\n  userAnswer: { stringValue: d.userAnswer },\n  correct: { booleanValue: d.correct },\n  score: { integerValue: String(d.score) },\n  feedback: { stringValue: d.feedback },\n  suggestion: { stringValue: d.suggestion },\n  createdAt: { stringValue: d.createdAt }\n}});\nreturn [{ json: { ...d, firestoreBody } }];"
+      },
+      "id": "e28d7ff2-9b79-4701-9435-5c223fac9876",
+      "name": "Buduj Attempt Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/exerciseAttempts/{{ $json.attemptId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "4321a5ef-9a1b-407d-a279-7e28a05918c7",
+      "name": "Firestore — Zapisz Attempt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "correct": "={{ $(\"Parsuj Ocenę Ćwiczenia\").item.json.correct }}",
+          "score": "={{ $(\"Parsuj Ocenę Ćwiczenia\").item.json.score }}",
+          "feedback": "={{ $(\"Parsuj Ocenę Ćwiczenia\").item.json.feedback }}",
+          "suggestion": "={{ $(\"Parsuj Ocenę Ćwiczenia\").item.json.suggestion }}"
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "34aa891c-b7cf-4afd-b831-a52efc04f1dd",
+      "name": "Odpowiedz Wynik Ćwiczenia",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Sprawdź Ćwiczenie": {
+      "main": [
+        [
+          {
+            "node": "GPT — Ocen Cwiczenie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Ocen Cwiczenie": {
+      "main": [
+        [
+          {
+            "node": "Parsuj Ocenę Ćwiczenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj Ocenę Ćwiczenia": {
+      "main": [
+        [
+          {
+            "node": "Buduj Attempt Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buduj Attempt Body": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Zapisz Attempt": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedz Wynik Ćwiczenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "392c32ae-5af4-4eea-b7f7-a67068582cdb",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "137501ae642560edd95a76486297d6e65c2c243dbdba68938b6b204fd0911415"
+  },
+  "id": "OfGRs78iNR257sYG",
+  "tags": []
+}

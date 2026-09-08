@@ -1,0 +1,518 @@
+{
+  "name": "Agent Generowania filmów",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": "7912263345"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "638a7c63-b746-4b10-94d2-9cc62f18480b",
+      "name": "Telegram Trigger",
+      "webhookId": "b01a996b-3da3-4e49-9853-f1fbdb4ada8d",
+      "credentials": {
+        "telegramApi": {
+          "id": "rxKeCftofnxqePIO",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a raw documentary-style short-form video director. Your task is to generate a SINGLE ultra-realistic cinematic scene that looks like authentic human-recorded footage, NOT animation, NOT stylized, NOT fantasy.\nThis must feel like a real moment captured accidentally — imperfect, slightly messy, and emotionally grounded.\nABSOLUTE RESTRICTIONS:\nNo animated look\nNo fantasy, no dreamy lighting, no soft glow\nNo exaggerated colors, no unreal depth of field\nNo cinematic polish that feels artificial\nNo stylized characters or environments\nNo “beautiful” or “magical” wording\nGENERAL RULES:\nWrite in grounded, natural, real-world cinematic English\nPrioritize realism over aesthetics\nEmbrace imperfections: slight camera shake, exposure shifts, imperfect focus, grain, motion blur\nLighting must be practical and believable (window light, street lamps, cloudy daylight)\nColors should feel muted, slightly desaturated, realistic\nThe entire output is ONE continuous scene lasting ~8 seconds\nNo explanations, no meta comments\nOUTPUT STRUCTURE (MANDATORY):\noutput:\ntitle: <short, grounded title>\ndescription: <1 sentence, simple and realistic>\nscenes:\nscene 1: <single paragraph scene description>\nSCENE RULES:\nThe scene description must include:\nHandheld or phone-like camera behavior with micro-movements\nReal human body language (small gestures, breathing, blinking, weight shifts)\nA believable, ordinary environment (street, room, car, hallway, gym, shop)\nRealistic time of day and lighting\nNatural audio (room tone, distant traffic, footsteps, fabric movement, breath)\nNo voiceover unless it’s accidental or half-heard\nFull screen, no black bars\nDo NOT use bullet points\nDo NOT label sections\nDo NOT use JSON symbols or quotation marks\nSTYLE OVERRIDES (VERY IMPORTANT):\nStyle: real-life footage, documentary, phone camera, accidental framing\nVibe: raw, quiet, tense, intimate\nReference feeling: TikTok POV, street documentary, behind-the-scenes clip\nAvoid epic language. Keep it simple and physical.\nNow generate the output based strictly on the USER MESSAGE."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        400,
+        0
+      ],
+      "id": "5eccd891-c808-4d55-8288-9c474232a8d3",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        432
+      ],
+      "id": "7ac67e5c-c74e-4037-bcda-a6b5486e453e",
+      "name": "Think"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=YouTube Shorts Memory:  Platform: YouTube Shorts Language: Polish Duration: 30–60 seconds  Style: - Fast-paced - Aggressive hook in first 1.5 seconds - High energy  Narration: - Strong male voice - Short punchlines  Visuals: - Fast cuts - High contrast - Bold captions  Rules: - No filler - One idea per video - End with strong punchline"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        432
+      ],
+      "id": "e84c8ed2-bc73-4a81-ab57-98b9532aaf0b",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"output\": {\n    \"title\": \"string\",\n    \"description\": \"string\",\n    \"scenes\": {\n      \"scene 1\": \"string\",\n      \"scene 2\": \"string\",\n      \"scene 3\": \"string\",\n      \"scene 4\": \"string\"\n    }\n  }\n}\n",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        576,
+        576
+      ],
+      "id": "4fdcbe46-5215-429b-802f-87a26b84295a",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "07db663e-6c5b-4b7f-8b6c-a64a28a713f9",
+      "name": "Transcribe Voice to Text",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Jld12CWRc5FVqXP9",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/botYOUR_TELEGRAM_BOT_TOKEN/{{ $json.result.file_path }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "73a8cf48-a4f5-43b1-add1-26ba1b5dbaf8",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the first item from the input\nconst item = items[0]; // 'items' is the correct n8n context variable\n\n// Safely access the scenes\nconst scenes = item.json.output?.scenes;\n\nif (!scenes) {\n  throw new Error(\"Scenes not found in input data.\");\n}\n\n// Return 8 individual items (one per scene)\nreturn Object.entries(scenes).map(([key, value]) => {\n  return {\n    json: {\n      scene: key,\n      text: value\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        272
+      ],
+      "id": "aa71f00d-bc85-4082-bc0b-3531e93e3374",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/nowy-projekt-492511/locations/us-central1/publishers/google/models/veo-3.0-generate-preview:predictLongRunning",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.text }}\",\n  \"model\": \"veo3_fast\",\n  \"aspectRatio\": \"9:16\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        864,
+        0
+      ],
+      "id": "c6beee9a-c73d-4e48-9461-393938bb3f59",
+      "name": "Veo 3",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "skFLByfH80GVREl2",
+          "name": "Header Auth account"
+        },
+        "googleApi": {
+          "id": "JNfLvP4anbOBcXoq",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        864,
+        272
+      ],
+      "id": "6d9d73a5-510d-41d4-98c2-a078e5c35dc1",
+      "name": "Wait",
+      "webhookId": "8b0a7814-50e2-4501-a36b-ffa7b3533f76"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/veo/record-info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <token>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1072,
+        0
+      ],
+      "id": "5d998ae0-5374-44d2-9de6-1ae3a7293b42",
+      "name": "Get VEO3.1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "skFLByfH80GVREl2",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const storyAgent = $items('AI Agent')[0].json;\n\nreturn [\n  {\n    video_urls: items\n      .map(item => item.json?.data?.response?.resultUrls || [])\n      .flat(),\n    title: storyAgent.output?.title || '',\n    description: storyAgent.output?.description || ''\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        272
+      ],
+      "id": "77eb474e-8025-4a71-839c-8ce4f0f40a79",
+      "name": "Group Clips"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.title }}",
+        "regionCode": "PL",
+        "categoryId": "1",
+        "binaryProperty": "video",
+        "options": {
+          "description": "={{ $json.description }}"
+        }
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        272
+      ],
+      "id": "ee86d832-34c7-4606-a90f-97881b55ef07",
+      "name": "Upload a video"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.video_urls[0] }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "video"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "965cc9f4-cf15-4267-a0ad-b318ad4b38fe",
+      "name": "Pobieranie Vid"
+    },
+    {
+      "parameters": {
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/getFile",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "file_id",
+              "value": "={{ $json.message.voice.file_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        272
+      ],
+      "id": "ca634e5c-4f64-44fb-b9ab-14c3b4225365",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        432
+      ],
+      "id": "158e6c5d-6b27-4bf4-8894-b037bccb9c40",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "Jld12CWRc5FVqXP9",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Voice to Text": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Voice to Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Veo 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get VEO3.1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get VEO3.1": {
+      "main": [
+        [
+          {
+            "node": "Group Clips",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Group Clips": {
+      "main": [
+        [
+          {
+            "node": "Pobieranie Vid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pobieranie Vid": {
+      "main": [
+        [
+          {
+            "node": "Upload a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "081eecc8-6831-4f05-8b79-337805d220e7",
+  "meta": {
+    "instanceId": "9ed45b2edb3846d2c35f1e402f2ca4aa845eac04c96ba15d9c52fcf48cf1564c"
+  },
+  "id": "7mlNNflrfSxnoOnK",
+  "tags": []
+}

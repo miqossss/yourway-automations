@@ -1,0 +1,633 @@
+{
+  "name": "EduFlow — Ocenianie Odpowiedzi",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduflow-grade",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1b35a7e7-9383-4ace-96ae-6d3c48531468",
+      "name": "Webhook — Przyjmij Odpowiedź",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        96
+      ],
+      "webhookId": "db125790-f254-4571-bc5c-ded488c2ec68"
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.body.lessonId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {}
+      },
+      "id": "2a0a6124-54e0-4f5d-b56b-ab0222c61da1",
+      "name": "Firestore — Pobierz Lekcję",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes nauczycielem oceniajacym odpowiedzi uczniow. Oceniasz jakosc zrozumienia, nie szukasz jednej poprawnej odpowiedzi. Akceptujesz parafrazy i rozne sformulowania. Nie karzesz za literowki. Feedback jest wspierajacy. Odpowiadasz TYLKO czystym JSON bez markdown bez backtickow."
+            },
+            {
+              "content": "=Ocen odpowiedz ucznia wzgledem notatki lekcji.\n\nPytanie: {{ $('Webhook — Przyjmij Odpowiedź').item.json.body.question }}\nOdpowiedz ucznia: {{ $('Webhook — Przyjmij Odpowiedź').item.json.body.answer }}\nNotatka lekcji:\n{{ $json.fields.note.stringValue }}\n\nZwroc TYLKO JSON:\n{\"knowledgeLevel\":0-100,\"coverageLevel\":0-100,\"understandingLevel\":0-100,\"confidence\":0-100,\"feedback\":\"2-4 zdania wspierajacego komentarza po polsku\",\"strengthSignals\":[\"co uczen rozumie dobrze\"],\"gapSignals\":[\"czego brakuje\"],\"misconceptions\":[\"bledne przekonania\"],\"nextLearningStep\":\"jedna rzecz do douczenia\"}\n\nZasady: knowledgeLevel=ogolny poziom, coverageLevel=ile elementow z notatki ujal, understandingLevel=czy rozumie zaleznosci. Jezeli czesciowo poprawna daj czescciowe punkty. Feedback bez tonu zle/dobrze."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 600,
+          "temperature": 0.3
+        }
+      },
+      "id": "1370604d-0ae6-4799-8c01-a9b6ce643cc2",
+      "name": "GPT — Oceń Jakościowo",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        16
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nif (!rawText && item.message && item.message.content) { rawText = String(item.message.content); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nif (!parsed) { parsed = { knowledgeLevel: 50, coverageLevel: 50, understandingLevel: 50, confidence: 50, feedback: 'Odpowiedz zostala zapisana.', strengthSignals: [], gapSignals: [], misconceptions: [], nextLearningStep: '' }; }\nconst body = $('Webhook — Przyjmij Odpowiedź').first().json.body;\nconst answerId = 'answer_' + body.studentId + '_' + body.taskId + '_' + body.questionIndex + '_' + Date.now();\nreturn [{ json: {\n  answerId, taskId: body.taskId, studentId: body.studentId,\n  lessonId: body.lessonId, questionIndex: parseInt(body.questionIndex || 0),\n  question: body.question, answerText: body.answer,\n  knowledgeLevel: parsed.knowledgeLevel || 0, coverageLevel: parsed.coverageLevel || 0,\n  understandingLevel: parsed.understandingLevel || 0, confidence: parsed.confidence || 0,\n  feedback: parsed.feedback || '',\n  strengthSignals: Array.isArray(parsed.strengthSignals) ? parsed.strengthSignals : [],\n  gapSignals: Array.isArray(parsed.gapSignals) ? parsed.gapSignals : [],\n  misconceptions: Array.isArray(parsed.misconceptions) ? parsed.misconceptions : [],\n  nextLearningStep: parsed.nextLearningStep || '',\n  evaluatedAt: new Date().toISOString()\n}}];"
+      },
+      "id": "a39aa661-b41f-40cf-a44c-4bcfd1f37ff6",
+      "name": "Parsuj Ocenę Jakościową",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst toFSArr = function(arr) { return { arrayValue: { values: arr.map(function(s) { return { stringValue: String(s) }; }) } }; };\nconst body = JSON.stringify({ fields: {\n  answerId: { stringValue: d.answerId }, taskId: { stringValue: d.taskId },\n  studentId: { stringValue: d.studentId }, lessonId: { stringValue: d.lessonId },\n  questionIndex: { integerValue: String(d.questionIndex) }, content: { stringValue: d.answerText },\n  question: { stringValue: d.question }, knowledgeLevel: { integerValue: String(d.knowledgeLevel) },\n  coverageLevel: { integerValue: String(d.coverageLevel) }, understandingLevel: { integerValue: String(d.understandingLevel) },\n  confidence: { integerValue: String(d.confidence) }, feedback: { stringValue: d.feedback },\n  strengthSignals: toFSArr(d.strengthSignals), gapSignals: toFSArr(d.gapSignals),\n  misconceptions: toFSArr(d.misconceptions), nextLearningStep: { stringValue: d.nextLearningStep },\n  evaluatedAt: { stringValue: d.evaluatedAt }\n}});\nreturn [{ json: { ...d, firestoreBody: body } }];"
+      },
+      "id": "874fb669-456b-4924-9978-02a0c288e49f",
+      "name": "Buduj i Zapisz Answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/answers/{{ $json.answerId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "e3e8c8b2-61bb-499d-aec9-a879adacb47e",
+      "name": "Firestore — POST Answer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $('Parsuj Ocenę Jakościową').item.json.taskId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {}
+      },
+      "id": "0689516c-4394-4a36-bd7d-fd3d2ad8dec4",
+      "name": "Firestore — Pobierz Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const taskDoc = $input.first().json;\nconst gradeData = $('Parsuj Ocenę Jakościową').first().json;\nconst totalQuestions = taskDoc.fields?.questions?.arrayValue?.values?.length || 4;\nconst currentAnswered = parseInt(taskDoc.fields?.answeredCount?.integerValue || '0') + 1;\nconst quizCompleted = currentAnswered >= totalQuestions;\nreturn [{ json: {\n  taskId: gradeData.taskId, studentId: gradeData.studentId,\n  lessonId: gradeData.lessonId, classId: taskDoc.fields?.classId?.stringValue || '',\n  answeredCount: currentAnswered, totalQuestions, quizCompleted,\n  newStatus: quizCompleted ? 'done' : 'in_progress',\n  newQuizStatus: quizCompleted ? 'completed' : 'in_progress',\n  knowledgeLevel: gradeData.knowledgeLevel, coverageLevel: gradeData.coverageLevel,\n  understandingLevel: gradeData.understandingLevel, confidence: gradeData.confidence,\n  feedback: gradeData.feedback, nextLearningStep: gradeData.nextLearningStep\n}}];"
+      },
+      "id": "af3de01e-bcff-4dd5-abaf-bad87acd384d",
+      "name": "Sprawdź Postęp Taska",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst body = JSON.stringify({ fields: {\n  status: { stringValue: d.newStatus }, quizStatus: { stringValue: d.newQuizStatus },\n  answeredCount: { integerValue: String(d.answeredCount) },\n  noteUnlocked: { booleanValue: d.quizCompleted }, exercisesUnlocked: { booleanValue: d.quizCompleted }\n}});\nreturn [{ json: { ...d, firestoreTaskBody: body } }];"
+      },
+      "id": "824eb7ca-091e-49b6-9596-22c15b83b201",
+      "name": "Buduj Update Taska",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $json.taskId }}?updateMask.fieldPaths=status&updateMask.fieldPaths=quizStatus&updateMask.fieldPaths=answeredCount&updateMask.fieldPaths=noteUnlocked&updateMask.fieldPaths=exercisesUnlocked",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreTaskBody }}",
+        "options": {}
+      },
+      "id": "4066e5ab-bc0e-4277-8ff7-1aea281f7b22",
+      "name": "Firestore — Aktualizuj Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Sprawdź Postęp Taska\").item.json.quizCompleted }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "89946bd4-1f65-481e-80db-bee4015ed8fa",
+      "name": "Quiz Zaliczony?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents:runQuery",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": {
+          "structuredQuery": {
+            "from": [
+              {
+                "collectionId": "answers"
+              }
+            ],
+            "where": {
+              "compositeFilter": {
+                "op": "AND",
+                "filters": [
+                  {
+                    "fieldFilter": {
+                      "field": {
+                        "fieldPath": "studentId"
+                      },
+                      "op": "EQUAL",
+                      "value": {
+                        "stringValue": "={{ $(\"Sprawdź Postęp Taska\").item.json.studentId }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldFilter": {
+                      "field": {
+                        "fieldPath": "lessonId"
+                      },
+                      "op": "EQUAL",
+                      "value": {
+                        "stringValue": "={{ $(\"Sprawdź Postęp Taska\").item.json.lessonId }}"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "options": {}
+      },
+      "id": "08bd4f0a-bdd1-49ea-87f4-f49a351b9b54",
+      "name": "Firestore — Pobierz Wszystkie Odpowiedzi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2464,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes analitykiem edukacyjnym. Odpowiadasz TYLKO czystym JSON bez markdown bez backtickow."
+            },
+            {
+              "content": "=Na podstawie ponizszych danych wygeneruj krotki raport wiedzy ucznia.\n\nDane (skrocone):\n{{ JSON.stringify($input.all().map(function(i) { return { q: i.json.questionIndex, k: i.json.knowledgeLevel, c: i.json.coverageLevel, u: i.json.understandingLevel, gaps: i.json.gapSignals, misc: i.json.misconceptions }; })) }}\n\nZwroc TYLKO JSON:\n{\"overallKnowledgeLevel\":0-100,\"strengths\":[\"obszar opanowany\"],\"weakAreas\":[\"obszar do poprawy\"],\"misconceptions\":[\"blad\"],\"recommendedRevisionPlan\":[\"krok 1\",\"krok 2\"],\"teacherTips\":[\"wskazowka\"],\"summaryForTeacher\":\"4-6 zdan podsumowania\"}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 800,
+          "temperature": 0.3
+        }
+      },
+      "id": "226caa81-4c52-4e60-b18e-0d6502cfea85",
+      "name": "GPT — Raport Ucznia",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2624,
+        -112
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nif (!parsed) { parsed = { overallKnowledgeLevel: 0, strengths: [], weakAreas: [], misconceptions: [], recommendedRevisionPlan: [], teacherTips: [], summaryForTeacher: '' }; }\nconst pd = $('Sprawdź Postęp Taska').first().json;\nconst reportId = 'report_' + pd.studentId + '_' + pd.lessonId;\nconst toFSArr = function(arr) { return { arrayValue: { values: (Array.isArray(arr) ? arr : []).map(function(s) { return { stringValue: String(s) }; }) } }; };\nconst firestoreBody = JSON.stringify({ fields: {\n  reportId: { stringValue: reportId }, studentId: { stringValue: pd.studentId },\n  lessonId: { stringValue: pd.lessonId }, classId: { stringValue: pd.classId || '' },\n  generatedAt: { stringValue: new Date().toISOString() },\n  overallKnowledgeLevel: { integerValue: String(parsed.overallKnowledgeLevel || 0) },\n  strengths: toFSArr(parsed.strengths), weakAreas: toFSArr(parsed.weakAreas),\n  misconceptions: toFSArr(parsed.misconceptions), recommendedRevisionPlan: toFSArr(parsed.recommendedRevisionPlan),\n  teacherTips: toFSArr(parsed.teacherTips), summaryForTeacher: { stringValue: parsed.summaryForTeacher || '' }\n}});\nreturn [{ json: { reportId, firestoreBody } }];"
+      },
+      "id": "d3d98c4b-228b-4146-91b0-cc0a9be58e9f",
+      "name": "Parsuj i Buduj Raport Ucznia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/studentKnowledgeReports/{{ $json.reportId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "a023ad8e-0ee9-4469-a576-53ee84da00bf",
+      "name": "Firestore — Zapisz Raport Ucznia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3136,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "taskCompleted": true,
+          "noteUnlocked": true,
+          "exercisesUnlocked": true,
+          "knowledgeLevel": "={{ $(\"Sprawdź Postęp Taska\").item.json.knowledgeLevel }}",
+          "coverageLevel": "={{ $(\"Sprawdź Postęp Taska\").item.json.coverageLevel }}",
+          "understandingLevel": "={{ $(\"Sprawdź Postęp Taska\").item.json.understandingLevel }}",
+          "confidence": "={{ $(\"Sprawdź Postęp Taska\").item.json.confidence }}",
+          "feedback": "={{ $(\"Sprawdź Postęp Taska\").item.json.feedback }}",
+          "nextLearningStep": "={{ $(\"Sprawdź Postęp Taska\").item.json.nextLearningStep }}",
+          "answeredCount": "={{ $(\"Sprawdź Postęp Taska\").item.json.answeredCount }}",
+          "totalQuestions": "={{ $(\"Sprawdź Postęp Taska\").item.json.totalQuestions }}",
+          "reportGenerated": true
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "6400572e-7328-4ccf-b43e-679ad90f5642",
+      "name": "Odpowiedz Quiz Ukończony",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "knowledgeLevel": "={{ $(\"Sprawdź Postęp Taska\").item.json.knowledgeLevel }}",
+          "coverageLevel": "={{ $(\"Sprawdź Postęp Taska\").item.json.coverageLevel }}",
+          "understandingLevel": "={{ $(\"Sprawdź Postęp Taska\").item.json.understandingLevel }}",
+          "confidence": "={{ $(\"Sprawdź Postęp Taska\").item.json.confidence }}",
+          "feedback": "={{ $(\"Sprawdź Postęp Taska\").item.json.feedback }}",
+          "nextLearningStep": "={{ $(\"Sprawdź Postęp Taska\").item.json.nextLearningStep }}",
+          "taskCompleted": false,
+          "answeredCount": "={{ $(\"Sprawdź Postęp Taska\").item.json.answeredCount }}",
+          "totalQuestions": "={{ $(\"Sprawdź Postęp Taska\").item.json.totalQuestions }}"
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e9f440ff-890e-4b51-998a-955c9716a3da",
+      "name": "Odpowiedz Postęp",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2464,
+        192
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Przyjmij Odpowiedź": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Pobierz Lekcję",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Pobierz Lekcję": {
+      "main": [
+        [
+          {
+            "node": "GPT — Oceń Jakościowo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Oceń Jakościowo": {
+      "main": [
+        [
+          {
+            "node": "Parsuj Ocenę Jakościową",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj Ocenę Jakościową": {
+      "main": [
+        [
+          {
+            "node": "Buduj i Zapisz Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buduj i Zapisz Answer": {
+      "main": [
+        [
+          {
+            "node": "Firestore — POST Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — POST Answer": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Pobierz Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Pobierz Task": {
+      "main": [
+        [
+          {
+            "node": "Sprawdź Postęp Taska",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprawdź Postęp Taska": {
+      "main": [
+        [
+          {
+            "node": "Buduj Update Taska",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buduj Update Taska": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Aktualizuj Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Aktualizuj Task": {
+      "main": [
+        [
+          {
+            "node": "Quiz Zaliczony?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz Zaliczony?": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Pobierz Wszystkie Odpowiedzi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz Postęp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Pobierz Wszystkie Odpowiedzi": {
+      "main": [
+        [
+          {
+            "node": "GPT — Raport Ucznia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Raport Ucznia": {
+      "main": [
+        [
+          {
+            "node": "Parsuj i Buduj Raport Ucznia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj i Buduj Raport Ucznia": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Raport Ucznia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Zapisz Raport Ucznia": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedz Quiz Ukończony",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "b5e624e4-7329-41bb-aa7c-7492054131d6",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "137501ae642560edd95a76486297d6e65c2c243dbdba68938b6b204fd0911415"
+  },
+  "id": "0YIgfS7cLdvn6ld0",
+  "tags": []
+}

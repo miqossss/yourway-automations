@@ -1,0 +1,143 @@
+{
+  "name": "EduFlow — Chatbot Lekcji",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduflow-chatbot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f01382e3-8619-43e9-ad81-fcf208b06248",
+      "name": "Webhook — Chat Lekcji",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "070228da-f89b-43f9-8c1d-e15428c84bad"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Jestes pomocnym asystentem edukacyjnym w aplikacji EduFlow. Pomagasz uczniowi zrozumiec material z aktualnej lekcji.\n\nAktualna lekcja: {{ $json.body.lessonTitle }}\nTemat do pilnowania: {{ $json.body.lessonTopicGuard }}\n\nNotatka lekcji (twoj glowny kontekst):\n{{ $json.body.note }}\n\nZasady:\n1. Odpowiadaj WYLACZNIE w zakresie tematu lekcji: {{ $json.body.lessonTitle }}\n2. Mozesz odpowiadac szerzej niz sama notatka, ale TYLKO w obrebie tematu {{ $json.body.lessonTitle }}\n3. Jesli pytanie jest poza tematem lekcji, NIE odpowiadaj merytorycznie na obcy temat\n4. W przypadku pytania poza tematem zwroc krotka odmoze i zaproponuj pytanie zwiazane z lekcja\n5. Odpowiedzi po polsku, zwiezle, pomocne, dla ucznia\n6. Odpowiadasz WYLACZNIE czystym JSON: {\"reply\":\"twoja odpowiedz\"}\n\nPolityka:\n- Pytanie w temacie: odpowiedz normalnie, jasno, z przykladem jesli potrzeba\n- Pytanie poza tematem: \"To wykracza poza temat tej lekcji. Moge pomoc w zakresie: {{ $json.body.lessonTitle }}. Na przyklad zapytaj: [zaproponuj konkretne pytanie zwiazane z lekcja]\""
+            },
+            {
+              "content": "=Historia rozmowy:\n{{ JSON.stringify($json.body.history || []) }}\n\nPytanie ucznia:\n{{ $json.body.message }}\n\nZwroc WYLACZNIE JSON:\n{\"reply\":\"odpowiedz po polsku\"}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 600,
+          "temperature": 0.5
+        }
+      },
+      "id": "40b702b7-3e5c-470c-af4e-6ba37d2cf3d8",
+      "name": "GPT — Chatbot Lekcji",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        -144
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nif (!rawText && item.message && item.message.content) { rawText = String(item.message.content); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nconst reply = (parsed && parsed.reply) ? String(parsed.reply) : rawText || 'Przepraszam, sprobuj ponownie.';\nreturn [{ json: { reply } }];"
+      },
+      "id": "b25e4f17-cb24-4f51-b35b-9d7847f60ef0",
+      "name": "Parsuj Odpowiedź Chatbota",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "reply": "={{ $json.reply }}"
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "4ed2621c-ce38-42c5-a774-104f8f496391",
+      "name": "Odpowiedz Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Chat Lekcji": {
+      "main": [
+        [
+          {
+            "node": "GPT — Chatbot Lekcji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Chatbot Lekcji": {
+      "main": [
+        [
+          {
+            "node": "Parsuj Odpowiedź Chatbota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj Odpowiedź Chatbota": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedz Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "acbac1bc-301d-4726-ba21-ea05c908b6b2",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "137501ae642560edd95a76486297d6e65c2c243dbdba68938b6b204fd0911415"
+  },
+  "id": "YlXxGTPVIn1XQzzU",
+  "tags": []
+}

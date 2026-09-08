@@ -1,0 +1,628 @@
+{
+  "name": "Agent Do Faktur",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "id": "0e533b48-e4fa-4f9a-ae30-e0cc0a373011",
+      "name": "Telegram Invoice Received",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        592
+      ],
+      "webhookId": "a8665709-39e0-4d83-a429-ea5985da1e31",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "joinPages": true
+        }
+      },
+      "id": "4162e36e-b906-4864-bece-6351308cd7a8",
+      "name": "Extract Text from PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Wyciągnij następujące dane z faktury:\n\n{{ $json.text }}\n\nZwróć dane w formacie JSON zgodnie ze schematem. Pole dataQuality ustaw na:\n- \"complete\" jeśli wszystkie dane są czytelne i kompletne\n- \"missing_nip\" jeśli brakuje numeru NIP\n- \"unreadable\" jeśli dokument jest nieczytelny\n- \"low_quality\" jeśli jakość obrazu jest niska\n\nW polu productName wpisz nazwę produktu lub usługi z faktury (z sekcji pozycji/towarów).\n\nW polu extractionNotes dodaj uwagi o problemach z odczytem.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Jesteś ekspertem w analizie faktur VAT. Wyciągasz kluczowe dane z faktur w różnych formatach i językach. Zwracasz dane w ustrukturyzowanym formacie JSON."
+        }
+      },
+      "id": "258192a8-0f02-48e9-92be-f6e51623c098",
+      "name": "Extract Invoice Data",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        688,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "0e9cbf84-553b-42d2-b2c2-4d5d03d37f2c",
+      "name": "OpenAI GPT-4o",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        704,
+        816
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "PIOikNDLrB8AFWYQ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"invoiceNumber\":\"FV/2024/01/001\",\"invoiceDate\":\"2024-01-15\",\"nip\":\"1234567890\",\"sellerName\":\"Firma ABC Sp. z o.o.\",\"netAmount\":1000,\"vatAmount\":230,\"grossAmount\":1230,\"dataQuality\":\"complete\",\"extractionNotes\":\"\"}"
+      },
+      "id": "e4cf9197-0c97-466b-bb53-0c45cb0dd061",
+      "name": "Invoice Data Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.dataQuality }}",
+                    "rightValue": "complete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8d374d53-dcf7-47a0-b72f-e84e01e75941"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Complete Data"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.dataQuality }}",
+                    "rightValue": "missing_nip",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cb061941-e7d0-41eb-8798-4c8a84612ff7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Missing NIP"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.dataQuality }}",
+                    "rightValue": "unreadable",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "53f118ff-4b42-4ce6-a32f-ef85cd048e8a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Unreadable"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.dataQuality }}",
+                    "rightValue": "low_quality",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "036c82fd-4f06-47ed-acc5-03b5e56e81b6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Low Quality"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e8a2536d-2a72-4fcb-834c-5d9b8c5aac14",
+      "name": "Route by Data Quality",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "year",
+              "name": "year",
+              "value": "={{ $json.output.invoiceDate.split(\".\")[2] }}",
+              "type": "string"
+            },
+            {
+              "id": "month",
+              "name": "month",
+              "value": "={{ $json.output.invoiceDate.split(\".\")[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "fileName",
+              "name": "fileName",
+              "value": "={{ $json.output.invoiceNumber.replace(/\\//g, \"_\") }}_{{ $json.output.sellerName }}.pdf",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "be37093e-2f37-4f2f-8e56-f396c434d0a8",
+      "name": "Prepare Folder Path",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "={{ $(\"Telegram Invoice Received\").item.binary.data }}",
+        "name": "={{ $json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "id": "736949d6-b9aa-4b3b-95fd-503e864a9067",
+      "name": "Upload to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1488,
+        304
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9ElzK0wfmCthwm1p",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1MXsWzjCmtUPENhT94hft2xzOBoXcljYeSRDhLjZeqiw",
+          "mode": "list",
+          "cachedResultName": "Dane do faktur",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MXsWzjCmtUPENhT94hft2xzOBoXcljYeSRDhLjZeqiw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MXsWzjCmtUPENhT94hft2xzOBoXcljYeSRDhLjZeqiw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Imie i nazwisko": "={{ $(\"Prepare Folder Path\").item.json.output.sellerName }}",
+            "email": "={{ $json.lastModifyingUser.emailAddress }}",
+            "numer faktury": "={{ $(\"Prepare Folder Path\").item.json.output.invoiceNumber }}",
+            "produkt": "={{ $(\"Prepare Folder Path\").item.json.output.productName }}",
+            "kwota": "={{ $(\"Prepare Folder Path\").item.json.output.grossAmount }}",
+            "data i godzina ": "={{ $(\"Prepare Folder Path\").item.json.output.invoiceDate }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Imie i nazwisko",
+              "displayName": "Imie i nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "numer faktury",
+              "displayName": "numer faktury",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "produkt",
+              "displayName": "produkt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "kwota",
+              "displayName": "kwota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "data i godzina ",
+              "displayName": "data i godzina ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "7f57fcca-b72c-41b1-afeb-5f1d17878f6c",
+      "name": "Add to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1712,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ICLmp4YJTS1zWn7V",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Invoice Received\").item.json.message.chat.id }}",
+        "text": "=Faktura przetworzona pomyslnie!\n\nNumer: {{ $(\"Prepare Folder Path\").item.json.output.invoiceNumber }}\nData: {{ $(\"Prepare Folder Path\").item.json.output.invoiceDate }}\nSprzedawca: {{ $(\"Prepare Folder Path\").item.json.output.sellerName }}\nNIP: {{ $(\"Prepare Folder Path\").item.json.output.nip }}\nKwota netto: {{ $(\"Prepare Folder Path\").item.json.output.netAmount }} PLN\nVAT: {{ $(\"Prepare Folder Path\").item.json.output.vatAmount }} PLN\nBrutto: {{ $(\"Prepare Folder Path\").item.json.output.grossAmount }} PLN\n\nLink do pliku: {{ $(\"Upload to Google Drive\").item.json.webViewLink }}",
+        "additionalFields": {
+          "disable_web_page_preview": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "ab929eed-c495-4978-8115-487b857bd95f",
+      "name": "Send Success Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1936,
+        304
+      ],
+      "webhookId": "fb533de7-d55c-4121-97c4-b0b2df2eabb8",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Invoice Received\").item.json.message.chat.id }}",
+        "text": "={{ \"Faktura przetworzona z ostrzezeniem\\n\\nBrak numeru NIP na fakturze\\n\\nNumer: \" + $json.output.invoiceNumber + \"\\nData: \" + $json.output.invoiceDate + \"\\nSprzedawca: \" + $json.output.sellerName + \"\\nBrutto: \" + $json.output.grossAmount + \" PLN\\n\\n\" + $json.output.extractionNotes }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "58d64e34-3095-4e77-ac9c-9a9ab7c18cb7",
+      "name": "Send Missing NIP Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        496
+      ],
+      "webhookId": "17f034dc-0548-44be-aa49-3d2bb94b1c43",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Invoice Received\").item.json.message.chat.id }}",
+        "text": "={{ \"Nie udalo sie przetworzyc faktury\\n\\nDokument jest nieczytelny\\n\\n\" + $json.output.extractionNotes + \"\\n\\nProsze przeslac fakture w lepszej jakosci lub w innym formacie.\" }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "3114235f-1811-4b94-b113-701b1d05177f",
+      "name": "Send Unreadable Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        688
+      ],
+      "webhookId": "b4d2b49e-ba17-4141-9535-0c9bb12fd12f",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Invoice Received\").item.json.message.chat.id }}",
+        "text": "={{ \"Niska jakosc obrazu\\n\\nJakosc zdjecia faktury jest zbyt niska\\n\\n\" + $json.output.extractionNotes + \"\\n\\nProsze przeslac fakture w wyzszej rozdzielczosci lub jako plik PDF.\" }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "12941829-06bc-46eb-8497-f9ae6fcfcd65",
+      "name": "Send Low Quality Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        880
+      ],
+      "webhookId": "1f6575d2-eb10-4ecc-a75b-51d08bc7a88b",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Invoice Received": {
+      "main": [
+        [
+          {
+            "node": "Extract Text from PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text from PDF": {
+      "main": [
+        [
+          {
+            "node": "Extract Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Invoice Data": {
+      "main": [
+        [
+          {
+            "node": "Route by Data Quality",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-4o": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Invoice Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Data Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract Invoice Data",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Data Quality": {
+      "main": [
+        [
+          {
+            "node": "Prepare Folder Path",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Missing NIP Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Unreadable Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Low Quality Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Folder Path": {
+      "main": [
+        [
+          {
+            "node": "Upload to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Add to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Send Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e56ce90c-21d4-44eb-b8de-d9ff596ee0ae",
+  "meta": {
+    "instanceId": "f45a476f11f2ebaa7feb1a9515e40b5417425ca2379a7d5263a021abbd44c13d"
+  },
+  "id": "RaMP4ttgeSbh9QZY",
+  "tags": []
+}

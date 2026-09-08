@@ -1,0 +1,1490 @@
+{
+  "name": "EduFlow — Przetwarzanie Audio",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduflow-audio",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2dc8c1b3-28f7-4c4e-9919-3a2aad052f12",
+      "name": "Webhook — Przyjmij Audio",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        672
+      ],
+      "webhookId": "e65ba49c-aa99-43c4-9a5a-41cd3a173dea"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.headers['x-eduflow-secret'] }}",
+              "rightValue": "eduflow-secret-2026",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7e2b1b53-c89c-44f8-8105-ba2755357716",
+      "name": "Sprawdź Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.workflowStep }}",
+              "rightValue": "approve_and_process",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "50b66667-678d-408d-b8c1-7af736bf629f",
+      "name": "Tryb Workflow?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst transcript = String(body.transcript || '').trim();\nif (!transcript) { return [{ json: { error: true, reason: 'Brak transkrypcji' } }]; }\nreturn [{ json: { teacherId: body.teacherId, classId: body.classId, className: body.className || '', subject: body.classSubject || body.subject || '', timestamp: body.timestamp || new Date().toISOString(), transcript, error: false } }];"
+      },
+      "id": "7f416e65-aba0-4099-8176-36adb195bf12",
+      "name": "Normalizuj Dane (approve)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "14d0228b-9fff-402c-9f44-1d3f1da17656",
+      "name": "Transcript OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes asystentem edukacyjnym tworzacym notatki dla uczniow. Odpowiadasz TYLKO czystym JSON bez markdown, bez komentarzy, bez backtick. Nie dodajesz zadnych informacji spoza transkrypcji."
+            },
+            {
+              "content": "=Na podstawie transkrypcji lekcji stworz zaawansowana, dluzsza i bardzo czytelna notatke dla ucznia.\n\nWymagania:\n- Pisz po polsku\n- Uzyj struktury markdown\n- Wymagane sekcje:\n  ## Temat lekcji\n  ## Najwazniejsze pojecia\n  ## Wyjasnienie krok po kroku\n  ## Przyklady\n  ## Najczestsze bledy i pulapki\n  ## Podsumowanie do zapamietania\n- Dlugosc: minimum 900 slow, maksimum 1600 slow\n- Pogrub kluczowe pojecia\n\nZwroc TYLKO JSON:\n{\"title\":\"krotki tytul lekcji\",\"note\":\"pelna notatka markdown\"}\n\nTRANSKRYPCJA:\n{{ $json.transcript }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 4000,
+          "temperature": 0.3
+        }
+      },
+      "id": "240c82ac-823c-44fe-a1a8-dab46fb8c15a",
+      "name": "GPT — Tylko Notatka",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        288
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nif (!rawText && item.message && item.message.content) { rawText = String(item.message.content); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'), e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nif (!parsed) { parsed = { title: 'Lekcja', note: '' }; }\nconst note = String(parsed.note || '').trim();\nconst title = String(parsed.title || 'Lekcja').trim();\nif (!note || note.length < 40) { return [{ json: { noteError: true, reason: 'Brak wygenerowanej notatki', noteLength: note.length } }]; }\nconst meta = $('Normalizuj Dane (approve)').first().json;\nconst lessonId = 'lesson_' + Date.now();\nreturn [{ json: { lessonId, teacherId: meta.teacherId, classId: meta.classId, subject: meta.subject || '', className: meta.className || '', timestamp: meta.timestamp, title, note, transcript: meta.transcript, noteError: false, noteLength: note.length } }];"
+      },
+      "id": "982a7783-db57-45df-bcd8-d9880b34355d",
+      "name": "Parsuj Notatke",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.noteError }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8c719573-9cf4-47c8-9958-46271b636118",
+      "name": "Notatka OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes nauczycielem tworzacym quiz sprawdzajacy. Masz uzywac WYLACZNIE informacji z podanej notatki. Odpowiadasz TYLKO czystym JSON bez markdown, bez komentarzy, bez backtick."
+            },
+            {
+              "content": "=Wygeneruj 8 pytan otwartych do quizu na podstawie WYLACZNIE ponizszej notatki.\nRozklad: 4 podstawowe, 3 srednie, 1 trudniejsze.\nKazde pytanie max 220 znakow.\nZwroc TYLKO JSON:\n{\"questions\":[\"pytanie 1\",\"pytanie 2\",\"pytanie 3\",\"pytanie 4\",\"pytanie 5\",\"pytanie 6\",\"pytanie 7\",\"pytanie 8\"]}\n\nNOTATKA:\n{{ $json.note }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 1200,
+          "temperature": 0.3
+        }
+      },
+      "id": "fc820c84-7155-4c75-8cd3-57c2fccf3074",
+      "name": "GPT — Generuj Quiz",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        192
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nif (!parsed) { parsed = {}; }\nlet quiz = [];\nif (Array.isArray(parsed.questions)) { quiz = parsed.questions.filter(function(q) { return typeof q === 'string' && q.trim(); }); }\nelse if (Array.isArray(parsed.quiz)) { quiz = parsed.quiz.filter(function(q) { return typeof q === 'string' && q.trim(); }); }\nconst seen = {};\nquiz = quiz.filter(function(q) { const k = q.toLowerCase().trim(); if (seen[k]) return false; seen[k] = true; return true; });\nif (quiz.length > 8) { quiz = quiz.slice(0, 8); }\nconst noteData = $('Parsuj Notatke').first().json;\nif (quiz.length < 6) { return [{ json: { validationError: true, reason: 'Za malo pytan w quizie (min 6, otrzymano ' + quiz.length + ')' } }]; }\nreturn [{ json: { lessonId: noteData.lessonId, teacherId: noteData.teacherId, classId: noteData.classId, subject: noteData.subject, className: noteData.className, timestamp: noteData.timestamp, title: noteData.title, note: noteData.note, quiz, transcript: noteData.transcript, validationError: false, _debug: { noteLength: noteData.noteLength, quizCount: quiz.length, subjectResolved: noteData.subject || 'brak' } } }];"
+      },
+      "id": "bcdc4ba7-5ba2-438d-b524-0f77b3937930",
+      "name": "Parsuj Quiz i Polacz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.validationError }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9c4c1468-6af8-4813-9d17-512ccd136b5d",
+      "name": "Walidacja GPT OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.lessonId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": {
+          "fields": {
+            "lessonId": {
+              "stringValue": "={{ $json.lessonId }}"
+            },
+            "teacherId": {
+              "stringValue": "={{ $json.teacherId }}"
+            },
+            "classId": {
+              "stringValue": "={{ $json.classId }}"
+            },
+            "subject": {
+              "stringValue": "={{ $json.subject }}"
+            },
+            "timestamp": {
+              "stringValue": "={{ $json.timestamp }}"
+            },
+            "title": {
+              "stringValue": "={{ $json.title }}"
+            },
+            "note": {
+              "stringValue": "={{ $json.note }}"
+            },
+            "transcript": {
+              "stringValue": "={{ $json.transcript }}"
+            }
+          }
+        },
+        "options": {}
+      },
+      "id": "0ccb9eb5-a04d-4898-8fb4-ddec37276ef8",
+      "name": "Firestore — Zapisz Lekcję",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2464,
+        96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bCEaCkTzibCwH6kH",
+          "name": "Header Auth account"
+        },
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes asystentem edukacyjnym w aplikacji EduFlow. Odpowiadasz WYLACZNIE poprawnym JSON bez markdown, bez komentarzy, bez tekstu przed ani po JSON."
+            },
+            {
+              "content": "=Na podstawie materialu lekcji wygeneruj cwiczenia utrwalajace.\n\nTytul: {{ $('Parsuj Quiz i Polacz').item.json.title }}\nNotatka: {{ $('Parsuj Quiz i Polacz').item.json.note }}\nQuiz: {{ JSON.stringify($('Parsuj Quiz i Polacz').item.json.quiz) }}\n\nZwroc WYLACZNIE JSON:\n{\"exercises\":{\"flashcards\":[{\"front\":\"Pojecie\",\"back\":\"Krotka odpowiedz\"}],\"quickCheck\":[{\"question\":\"Pytanie\",\"answer\":\"Odpowiedz\"}],\"openTasks\":[{\"prompt\":\"Zadanie\",\"hint\":\"Wskazowka\"}]}}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 2000,
+          "temperature": 0.4
+        }
+      },
+      "id": "616fe32a-27ec-4d2b-b7c0-fdf08e68526b",
+      "name": "GPT — Generuj Cwiczenia",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2688,
+        96
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) { const nl = rawText.indexOf(10); rawText = rawText.slice(nl+1); const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt); rawText = rawText.trim(); }\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) { const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}'); if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} } }\nconst exercises = (parsed && parsed.exercises) ? parsed.exercises : { flashcards: [], quickCheck: [], openTasks: [] };\nconst lessonData = $('Parsuj Quiz i Polacz').first().json;\nconst toFSArr = function(arr) { return { arrayValue: { values: arr.map(function(o) { return { stringValue: JSON.stringify(o) }; }) } }; };\nconst firestoreBody = JSON.stringify({ fields: { flashcards: toFSArr(exercises.flashcards || []), quickCheck: toFSArr(exercises.quickCheck || []), openTasks: toFSArr(exercises.openTasks || []) } });\nreturn [{ json: { lessonId: lessonData.lessonId, classId: lessonData.classId, exercises, firestoreExercisesBody: firestoreBody, teacherId: lessonData.teacherId, subject: lessonData.subject, quiz: lessonData.quiz, _debug: lessonData._debug } }];"
+      },
+      "id": "6a7d4eb5-e8a9-4b80-9cc9-41487f3ca078",
+      "name": "Parsuj i Zapisz Cwiczenia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.lessonId }}?updateMask.fieldPaths=flashcards&updateMask.fieldPaths=quickCheck&updateMask.fieldPaths=openTasks",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={{ $json.firestoreExercisesBody }}",
+        "options": {}
+      },
+      "id": "f96eded4-704c-4b34-8599-b13951aafe4e",
+      "name": "Firestore — Zapisz Cwiczenia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3136,
+        96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/classes/{{ $('Parsuj i Zapisz Cwiczenia').item.json.classId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {}
+      },
+      "id": "982060f7-233a-4b91-8934-573cf6a4d7d5",
+      "name": "Firestore — Pobierz Uczniów Klasy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3360,
+        96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bCEaCkTzibCwH6kH",
+          "name": "Header Auth account"
+        },
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.fields?.studentIds?.arrayValue?.values || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f4397f27-bfdc-4782-9588-94cca5aab137",
+      "name": "Są Uczniowie?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3584,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const classDoc = $input.first().json;\nconst studentIds = classDoc.fields?.studentIds?.arrayValue?.values?.map(v => v.stringValue) || [];\nconst lessonData = $('Parsuj i Zapisz Cwiczenia').first().json;\nreturn studentIds.map(studentId => ({ json: { studentId, lessonId: lessonData.lessonId, classId: lessonData.classId, quiz: lessonData.quiz } }));"
+      },
+      "id": "0a12b4a5-c779-476e-9db9-335e7704a408",
+      "name": "Przygotuj Listę Uczniów",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/student_profiles/{{ $json.studentId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ad75552a-0cfd-449b-a248-ab172571c553",
+      "name": "Firestore — Profil Ucznia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4032,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bCEaCkTzibCwH6kH",
+          "name": "Header Auth account"
+        },
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\nfor (const item of $input.all()) {\n  const s = $('Przygotuj Listę Uczniów').item.json;\n  const taskId = 'task_' + s.studentId + '_' + s.lessonId;\n  const questionsValues = s.quiz.map(function(q) { return { stringValue: q }; });\n  const firestoreBody = JSON.stringify({ fields: { taskId: { stringValue: taskId }, studentId: { stringValue: s.studentId }, lessonId: { stringValue: s.lessonId }, classId: { stringValue: s.classId }, status: { stringValue: 'locked' }, quizStatus: { stringValue: 'required' }, noteUnlocked: { booleanValue: false }, exercisesUnlocked: { booleanValue: false }, answeredCount: { integerValue: '0' }, questions: { arrayValue: { values: questionsValues } } } });\n  items.push({ json: { taskId, studentId: s.studentId, lessonId: s.lessonId, classId: s.classId, firestoreBody } });\n}\nreturn items;"
+      },
+      "id": "04adfa02-c8f9-47a8-b1f5-780a42699a22",
+      "name": "Buduj Task (Quiz-first)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4256,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $json.taskId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "ba62438f-da8f-49d0-876c-d87a538b9d1f",
+      "name": "Firestore — POST Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4480,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bCEaCkTzibCwH6kH",
+          "name": "Header Auth account"
+        },
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ld = $('Parsuj i Zapisz Cwiczenia').first().json;\nconst sc = $('Przygotuj Listę Uczniów').all().length;\nconst aid = 'analytics_' + ld.lessonId;\nreturn [{ json: { analyticsId: aid, lessonId: ld.lessonId, classId: ld.classId, teacherId: ld.teacherId, generatedAt: new Date().toISOString(), strengths: [], weaknesses: [], commonMistakes: [], recommendations: [], status: 'pending', _debug: { ...ld._debug, studentIdsCount: sc, tasksCreated: sc } } }];"
+      },
+      "id": "679b65ba-215d-4f07-903f-ec65117edf6d",
+      "name": "Przygotuj lessonAnalytics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4704,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessonAnalytics/{{ $json.analyticsId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": {
+          "fields": {
+            "analyticsId": {
+              "stringValue": "={{ $json.analyticsId }}"
+            },
+            "lessonId": {
+              "stringValue": "={{ $json.lessonId }}"
+            },
+            "classId": {
+              "stringValue": "={{ $json.classId }}"
+            },
+            "teacherId": {
+              "stringValue": "={{ $json.teacherId }}"
+            },
+            "generatedAt": {
+              "stringValue": "={{ $json.generatedAt }}"
+            },
+            "status": {
+              "stringValue": "pending"
+            }
+          }
+        },
+        "options": {}
+      },
+      "id": "e5f2eb90-44ad-4d86-b341-4ab89cad78af",
+      "name": "Firestore — Zapisz lessonAnalytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4928,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "workflowStep": "approve_and_process",
+          "message": "Lekcja przetworzona, notatka, quiz i cwiczenia wygenerowane",
+          "debug": {
+            "noteLength": "={{ $(\"Przygotuj lessonAnalytics\").item.json._debug.noteLength }}",
+            "quizCount": "={{ $(\"Przygotuj lessonAnalytics\").item.json._debug.quizCount }}",
+            "studentIdsCount": "={{ $(\"Przygotuj lessonAnalytics\").item.json._debug.studentIdsCount }}",
+            "tasksCreated": "={{ $(\"Przygotuj lessonAnalytics\").item.json._debug.tasksCreated }}"
+          }
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "36d1a80d-4201-46e9-b99d-aee2ed75690f",
+      "name": "Odpowiedz Sukces",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        5152,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "Brak uczniów w klasie"
+        },
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a3b54b1e-4642-4f8d-a0ad-7e103be1b398",
+      "name": "Odpowiedz Brak Uczniów",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3808,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "={{ $json.reason }}"
+        },
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "3adbf837-b145-42e0-b955-bd04cd3019bf",
+      "name": "Odpowiedz Blad Walidacji",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2464,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "={{ $json.reason }}"
+        },
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "2945b834-4e1b-4628-90f6-a690e3fd81a4",
+      "name": "Odpowiedz Blad Notatki",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1792,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "Brak transkrypcji — wymagane pole transcript"
+        },
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "66157984-6c04-4781-8225-e0f7b0baea80",
+      "name": "Odpowiedz Brak Transcript",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst binaryData = $input.first().binary;\nconst audioUrl = String(body.audioUrl || '').trim();\nconst hasBinary = !!(binaryData && (binaryData.data || binaryData.file || binaryData.audio));\nconst hasUrl = !!(audioUrl && audioUrl.startsWith('http'));\n\nif (!hasBinary && !hasUrl) {\n  return [{ json: {\n    audioError: true,\n    reason: 'Brak pliku audio — wyslij binary (pole data/audio/file) lub audioUrl'\n  }}];\n}\n\nreturn [{ json: {\n  audioError: false,\n  audioUrl: hasUrl ? audioUrl : '',\n  hasBinary,\n  hasUrl,\n  teacherId: body.teacherId || '',\n  classId: body.classId || '',\n  subject: body.classSubject || body.subject || '',\n  timestamp: body.timestamp || new Date().toISOString()\n}, binary: binaryData }];"
+      },
+      "id": "6e877ab6-b3f7-4967-9e3d-171980fe7758",
+      "name": "Przygotuj Audio (binary lub URL)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.audioError }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9d2b542f-6e50-4f5f-99e1-6f0ae0e7786b",
+      "name": "Audio dostępne?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasUrl }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2e5da475-efef-4449-8ff9-4c6523115d76",
+      "name": "Potrzeba fetch URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.audioUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "1fa64872-e9c0-49b0-8616-c849c8f5ba14",
+      "name": "Pobierz Audio z URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const meta = $('Przygotuj Audio (binary lub URL)').first().json;\nconst binaryData = $input.first().binary;\nreturn [{ json: { teacherId: meta.teacherId, classId: meta.classId, subject: meta.subject, timestamp: meta.timestamp }, binary: binaryData }];"
+      },
+      "id": "204b9933-2df2-4506-90f4-303af0ab9eea",
+      "name": "Połącz po Fetch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "pl"
+        }
+      },
+      "id": "1b35317b-3a71-4b67-b102-ceb846549c8d",
+      "name": "Whisper — Transkrypcja (URL)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        576
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet text = '';\nif (item.text) { text = String(item.text).trim(); }\nif (!text && item.transcription) { text = String(item.transcription).trim(); }\nif (!text && item.transcript) { text = String(item.transcript).trim(); }\n\nconst markers = ['KONIEC', 'KONIEC!', 'END', 'DONE', 'STOP', '[BLANK_AUDIO]', '[CISZA]'];\nconst textUpper = text.toUpperCase().trim();\nconst isMarker = markers.some(function(m) { return textUpper === m || textUpper === m + '.' || textUpper === m + '!'; });\n\nif (!text || text.length < 3 || isMarker) {\n  return [{ json: {\n    success: false,\n    transcriptValid: false,\n    error: 'stt_failed',\n    message: 'Nie udalo sie wygenerowac transkrypcji. Sprawdz czy nagranie zawiera mowe i sprobuj ponownie.'\n  }}];\n}\n\nreturn [{ json: {\n  success: true,\n  transcriptValid: true,\n  transcript: text,\n  transcription: text,\n  transcriptText: text,\n  text: text\n}}];"
+      },
+      "id": "080a58ee-3820-45a0-b411-1d7830e4fcfe",
+      "name": "Waliduj Transkrypcję",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.transcriptValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3508dcb4-babc-442a-b982-43f47fbcb488",
+      "name": "Transkrypcja Poprawna?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "workflowStep": "transcribe_only",
+          "transcript": "={{ $json.transcript }}",
+          "transcription": "={{ $json.transcript }}",
+          "transcriptText": "={{ $json.transcript }}",
+          "text": "={{ $json.transcript }}"
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "75c4a61a-85ef-454d-a6b9-cc002c44d94c",
+      "name": "Odpowiedz Transkrypcja",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2464,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "error": "={{ $json.error }}",
+          "message": "={{ $json.message }}"
+        },
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "id": "92a84ce5-d853-4e4b-b4a7-508b196a2a78",
+      "name": "Odpowiedz STT Failed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2464,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const meta = $input.first().json;\nconst binaryData = $input.first().binary;\n// Znajdz pierwsze pole binary niezaleznie od nazwy (data, audio, file)\nlet normalizedBinary = binaryData;\nif (binaryData && !binaryData.data) {\n  const keys = Object.keys(binaryData);\n  if (keys.length > 0) {\n    normalizedBinary = { data: binaryData[keys[0]] };\n  }\n}\nreturn [{ json: { teacherId: meta.teacherId, classId: meta.classId, subject: meta.subject, timestamp: meta.timestamp }, binary: normalizedBinary }];"
+      },
+      "id": "5060600a-86e7-4d11-8bdd-eb6d2979977a",
+      "name": "Użyj Binary Bezpośrednio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "pl"
+        }
+      },
+      "id": "d72bb9f5-3b18-4546-a153-3f13a12a348f",
+      "name": "Whisper — Transkrypcja (binary)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        768
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "error": "missing_audio",
+          "message": "={{ $json.reason }}"
+        },
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "019d8a39-e70d-4786-bbb8-fb7451fc5e6e",
+      "name": "Odpowiedz Brak Audio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "Unauthorized"
+        },
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "c00c777c-bdee-4fba-ac5e-ebc6152f74d1",
+      "name": "Odpowiedz 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        768
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Przyjmij Audio": {
+      "main": [
+        [
+          {
+            "node": "Sprawdź Secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprawdź Secret": {
+      "main": [
+        [
+          {
+            "node": "Tryb Workflow?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tryb Workflow?": {
+      "main": [
+        [
+          {
+            "node": "Normalizuj Dane (approve)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Przygotuj Audio (binary lub URL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizuj Dane (approve)": {
+      "main": [
+        [
+          {
+            "node": "Transcript OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcript OK?": {
+      "main": [
+        [
+          {
+            "node": "GPT — Tylko Notatka",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz Brak Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Tylko Notatka": {
+      "main": [
+        [
+          {
+            "node": "Parsuj Notatke",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj Notatke": {
+      "main": [
+        [
+          {
+            "node": "Notatka OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notatka OK?": {
+      "main": [
+        [
+          {
+            "node": "GPT — Generuj Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz Blad Notatki",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Generuj Quiz": {
+      "main": [
+        [
+          {
+            "node": "Parsuj Quiz i Polacz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj Quiz i Polacz": {
+      "main": [
+        [
+          {
+            "node": "Walidacja GPT OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Walidacja GPT OK?": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Lekcję",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz Blad Walidacji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Zapisz Lekcję": {
+      "main": [
+        [
+          {
+            "node": "GPT — Generuj Cwiczenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Generuj Cwiczenia": {
+      "main": [
+        [
+          {
+            "node": "Parsuj i Zapisz Cwiczenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj i Zapisz Cwiczenia": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Cwiczenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Zapisz Cwiczenia": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Pobierz Uczniów Klasy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Pobierz Uczniów Klasy": {
+      "main": [
+        [
+          {
+            "node": "Są Uczniowie?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Są Uczniowie?": {
+      "main": [
+        [
+          {
+            "node": "Przygotuj Listę Uczniów",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz Brak Uczniów",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Przygotuj Listę Uczniów": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Profil Ucznia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Profil Ucznia": {
+      "main": [
+        [
+          {
+            "node": "Buduj Task (Quiz-first)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buduj Task (Quiz-first)": {
+      "main": [
+        [
+          {
+            "node": "Firestore — POST Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — POST Task": {
+      "main": [
+        [
+          {
+            "node": "Przygotuj lessonAnalytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Przygotuj lessonAnalytics": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz lessonAnalytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Zapisz lessonAnalytics": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedz Sukces",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Przygotuj Audio (binary lub URL)": {
+      "main": [
+        [
+          {
+            "node": "Audio dostępne?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio dostępne?": {
+      "main": [
+        [
+          {
+            "node": "Potrzeba fetch URL?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz Brak Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Potrzeba fetch URL?": {
+      "main": [
+        [
+          {
+            "node": "Pobierz Audio z URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Użyj Binary Bezpośrednio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pobierz Audio z URL": {
+      "main": [
+        [
+          {
+            "node": "Połącz po Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Połącz po Fetch": {
+      "main": [
+        [
+          {
+            "node": "Whisper — Transkrypcja (URL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whisper — Transkrypcja (URL)": {
+      "main": [
+        [
+          {
+            "node": "Waliduj Transkrypcję",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Waliduj Transkrypcję": {
+      "main": [
+        [
+          {
+            "node": "Transkrypcja Poprawna?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transkrypcja Poprawna?": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedz Transkrypcja",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz STT Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Użyj Binary Bezpośrednio": {
+      "main": [
+        [
+          {
+            "node": "Whisper — Transkrypcja (binary)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whisper — Transkrypcja (binary)": {
+      "main": [
+        [
+          {
+            "node": "Waliduj Transkrypcję",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "e08cc3d5-8b20-4390-ba94-f827836210e1",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "137501ae642560edd95a76486297d6e65c2c243dbdba68938b6b204fd0911415"
+  },
+  "id": "xts3VqsM7O5yLzdR",
+  "tags": []
+}

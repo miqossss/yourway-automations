@@ -1,0 +1,556 @@
+{
+  "name": "EduFlow — PDF do Materiału AI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduflow-pdf-material",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6c8007f3-6aaf-40de-8982-49ee348bbd0a",
+      "name": "Webhook — Przyjmij PDF",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        192
+      ],
+      "webhookId": "692be088-a178-4354-8c14-dd6454131cc8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.headers['x-eduflow-secret'] }}",
+              "rightValue": "eduflow-secret-2026",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8d283f82-0888-4fb5-bc6a-25ce228de71d",
+      "name": "Sprawdź Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst timestamp = body.timestamp || new Date().toISOString();\nconst fileName = (body.storagePath || '').split('/').pop() || body.title || 'plik.pdf';\nconst wMode = String(body.workflowMode || '').toLowerCase();\nconst tCol = String(body.targetCollection || body.collection || '').toLowerCase();\nconst bType = String(body.type || '').toLowerCase();\nconst shouldCreateTasks = String(body.shouldCreateTasks || '').toLowerCase();\n// Tryb lesson tylko jesli jawnie wskazany\nconst isLesson = (wMode === 'lesson' || tCol === 'lessons' || bType === 'lesson') && shouldCreateTasks !== 'false';\nconst mode = isLesson ? 'lesson' : 'material';\nconst docId = mode === 'lesson' ? 'lesson_pdf_' + Date.now() : 'material_pdf_' + Date.now();\nreturn [{ json: {\n  docId, mode,\n  teacherId: body.teacherId || '',\n  classId: body.classId || '',\n  className: body.className || '',\n  subject: body.classSubject || body.subject || '',\n  title: body.title || fileName,\n  pdfUrl: body.pdfUrl || '',\n  storagePath: body.storagePath || '',\n  fileName, timestamp,\n  hasPdfUrl: !!(body.pdfUrl && body.pdfUrl.trim())\n}}];"
+      },
+      "id": "27d13757-80c2-44b2-965c-0106b4c9978a",
+      "name": "Przygotuj Metadane i Tryb",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "mode": "={{ $json.mode }}",
+          "message": "={{ $json.mode === \"lesson\" ? \"PDF przyjety. Lekcja pojawi sie po analizie AI.\" : \"PDF przyjety. Material dodatkowy pojawi sie po analizie AI.\" }}",
+          "lessonId": "={{ $json.mode === \"lesson\" ? $json.docId : undefined }}",
+          "materialId": "={{ $json.mode === \"material\" ? $json.docId : undefined }}"
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "4e42ceff-6af8-4740-aa76-38340a9972ce",
+      "name": "Odpowiedz Przyjęto",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $(\"Przygotuj Metadane i Tryb\").item.json.pdfUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "6c40dfff-3997-485a-82d5-3957271c1b18",
+      "name": "Pobierz PDF z URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Przygotuj Metadane i Tryb\").item.json.mode }}",
+              "rightValue": "lesson",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "52b9d786-cf92-4a49-a51e-6f35c14ce74c",
+      "name": "Tryb Lesson czy Material?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes asystentem edukacyjnym EduFlow. Odpowiadasz TYLKO czystym JSON bez markdown, bez komentarzy, bez backtick."
+            },
+            {
+              "content": "=Jestes asystentem edukacyjnym EduFlow. Na podstawie tekstu z PDF utworz pelna lekcje dla uczniow. Rozpoznaj temat i nadaj krotki tytul po polsku (3-8 slow). Wygeneruj notatke w Markdown, streszczenie i 6-8 pytan quizowych.\n\nTytul dokumentu: {{ $(\"Przygotuj Metadane i Tryb\").item.json.title }}\nPrzedmiot: {{ $(\"Przygotuj Metadane i Tryb\").item.json.subject }}\n\nWymagania:\n- Notatka po polsku, Markdown, naglowki ##, bullet pointy, pogrubione pojecia\n- Quiz: 6-8 pytan otwartych sprawdzajacych zrozumienie\n- Zwroc TYLKO JSON:\n{\"title\":\"krotki tytul 3-8 slow\",\"summary\":\"streszczenie 2-3 zdania\",\"note\":\"pelna notatka markdown\",\"quiz\":[\"pytanie 1\",\"pytanie 2\",\"pytanie 3\",\"pytanie 4\",\"pytanie 5\",\"pytanie 6\"]}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 5000,
+          "temperature": 0.3
+        }
+      },
+      "id": "080ac09f-9a08-4a47-815c-437afb48c901",
+      "name": "GPT — Generuj Lekcję z PDF",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1296,
+        0
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nif (!parsed) { parsed = { title: '', summary: '', note: rawText, quiz: [] }; }\nconst meta = $('Przygotuj Metadane i Tryb').first().json;\nconst quiz = Array.isArray(parsed.quiz) ? parsed.quiz.filter(function(q) { return typeof q === 'string' && q.trim(); }) : [];\nconst firestoreBody = JSON.stringify({ fields: {\n  lessonId: { stringValue: meta.docId },\n  classId: { stringValue: meta.classId },\n  teacherId: { stringValue: meta.teacherId },\n  title: { stringValue: String(parsed.title || meta.title) },\n  summary: { stringValue: String(parsed.summary || '') },\n  note: { stringValue: String(parsed.note || '') },\n  transcript: { stringValue: '' },\n  source: { stringValue: 'pdf_lesson' },\n  type: { stringValue: 'lesson' },\n  status: { stringValue: 'done' },\n  processingStatus: { stringValue: 'done' },\n  pdfUrl: { stringValue: meta.pdfUrl },\n  storagePath: { stringValue: meta.storagePath },\n  fileName: { stringValue: meta.fileName },\n  timestamp: { stringValue: meta.timestamp },\n  createdAt: { stringValue: meta.timestamp }\n}});\nreturn [{ json: { ...meta, title: parsed.title || meta.title, summary: parsed.summary || '', note: parsed.note || '', quiz, firestoreBody } }];"
+      },
+      "id": "4b92d100-0f37-4e86-8582-7034ba1cce38",
+      "name": "Parsuj Lekcję GPT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/lessons/{{ $json.docId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "b322ad12-7847-48f2-b5fa-0191fdf2e352",
+      "name": "Firestore — Zapisz Lekcję PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1792,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/classes/{{ $('Parsuj Lekcję GPT').item.json.classId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {}
+      },
+      "id": "0acf71b9-615a-4c19-943c-60cfdbd7dc50",
+      "name": "Firestore — Pobierz Uczniów (lesson)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const classDoc = $input.first().json;\nconst studentIds = classDoc.fields?.studentIds?.arrayValue?.values?.map(function(v) { return v.stringValue; }) || [];\nconst lessonData = $('Parsuj Lekcję GPT').first().json;\nconst questionsValues = lessonData.quiz.map(function(q) { return { stringValue: q }; });\nreturn studentIds.map(function(studentId) {\n  const taskId = 'task_' + studentId + '_' + lessonData.docId;\n  const firestoreBody = JSON.stringify({ fields: {\n    taskId: { stringValue: taskId },\n    lessonId: { stringValue: lessonData.docId },\n    studentId: { stringValue: studentId },\n    classId: { stringValue: lessonData.classId },\n    teacherId: { stringValue: lessonData.teacherId },\n    questions: { arrayValue: { values: questionsValues } },\n    answeredCount: { integerValue: '0' },\n    status: { stringValue: 'locked' },\n    quizStatus: { stringValue: 'required' },\n    noteUnlocked: { booleanValue: false },\n    exercisesUnlocked: { booleanValue: false },\n    createdAt: { stringValue: lessonData.timestamp }\n  }});\n  return { json: { taskId, studentId, firestoreBody, lessonId: lessonData.docId } };\n});"
+      },
+      "id": "f1549307-930a-4107-87d0-ed73cd8fab27",
+      "name": "Buduj Taski Uczniów",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/tasks/{{ $json.taskId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "3ff86cc6-0dde-48f8-99e9-7b2758e992b6",
+      "name": "Firestore — Zapisz Taski",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2464,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Jestes asystentem edukacyjnym EduFlow. To NIE jest lekcja i NIE jest obowiazkowy quiz. Nie tworzysz taskow. Twoim celem jest przygotowac bogaty, czytelny material edukacyjny ktory uczen bedzie chcial przeczytac w aplikacji. Odpowiadasz TYLKO czystym JSON bez markdown, bez komentarzy, bez backtick."
+            },
+            {
+              "content": "=Na podstawie tekstu z PDF przygotuj material dodatkowy dla ucznia.\n\nTytul dokumentu: {{ $(\"Przygotuj Metadane i Tryb\").item.json.title }}\nPrzedmiot: {{ $(\"Przygotuj Metadane i Tryb\").item.json.subject }}\n\nNie rob krotkiej notatki. Zrob uporzadkowany material: krotki tytul, dluzszy opis, najwazniejsze punkty, kilka czytelnych sekcji, pojecia z wyjasnieniami, pytania do powtorki.\n\nPisz po polsku, prostym szkolnym jezykiem. Wyciagnij sens z PDF, skroc go, uporzadkuj i wyjasniaj. Nie przepisuj tekstu mechanicznie.\n\nZwroc WYLACZNIE poprawny JSON:\n{\n  \"title\": \"krotki tytul 3-8 slow po polsku, bez slowa PDF\",\n  \"shortTitle\": \"2-5 slow na karte materialu\",\n  \"description\": \"2-4 zdania okolo 280-600 znakow. Ma zachecic ucznia do przeczytania i jasno mowic czego sie nauczy. Nie uzywaj markdown, nie dawaj list. Nie zaczynaj od Ten material dotyczy.\",\n  \"keyPoints\": [\"4-6 najwazniejszych rzeczy z materialu, krotkie konkretne zdania\"],\n  \"sections\": [\n    {\n      \"title\": \"krotki naglowek sekcji\",\n      \"body\": \"1-2 akapity prostym jezykiem wyjasniajace temat sekcji\",\n      \"bullets\": [\"3-5 konkretnych punktow z tej sekcji\"]\n    }\n  ],\n  \"importantTerms\": [\n    {\n      \"term\": \"pojecie lub data lub nazwisko\",\n      \"definition\": \"krotka definicja uczniowskim jezykiem\"\n    }\n  ],\n  \"recapQuestions\": [\n    {\n      \"question\": \"pytanie do samodzielnej powtorki\",\n      \"answer\": \"krotka sugerowana odpowiedz\"\n    }\n  ],\n  \"note\": \"pelna wersja markdown jako fallback z naglowkami ## listami i pogrubieniami **pojecie**\"\n}\n\nWymagania:\n- sections: 4-7 sekcji\n- keyPoints: 4-6 punktow\n- importantTerms: 5-10 pojec\n- recapQuestions: 4-7 pytan\n- note musi zawierac sekcje: ## Najwazniejsze pojecia, ## Co trzeba zapamietac, ## Wyjasnienie tematu, ## Krotka powtorka\n- Nie rób suchego streszczenia. Wyjasnij, uporzadkuj i uprosz."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 6000,
+          "temperature": 0.3
+        }
+      },
+      "id": "8ba8eae4-5493-4a1a-93cd-89ee021d1ef8",
+      "name": "GPT — Generuj Materiał z PDF",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        192
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawText = '';\nif (item.output && Array.isArray(item.output) && item.output[0] && item.output[0].content) {\n  const ct = item.output[0].content[0] && item.output[0].content[0].text;\n  rawText = (typeof ct === 'object' && ct !== null) ? JSON.stringify(ct) : String(ct || '');\n}\nif (!rawText && typeof item.output === 'string') { rawText = item.output; }\nif (!rawText && item.text) { rawText = String(item.text); }\nrawText = rawText.trim();\nconst tick3 = String.fromCharCode(96,96,96);\nif (rawText.startsWith(tick3)) {\n  const nl = rawText.indexOf(10); rawText = rawText.slice(nl + 1);\n  const lt = rawText.lastIndexOf(tick3); if (lt !== -1) rawText = rawText.slice(0, lt);\n  rawText = rawText.trim();\n}\nlet parsed = null;\ntry { parsed = JSON.parse(rawText); } catch(e) {}\nif (!parsed) {\n  const s = rawText.indexOf('{'); const e2 = rawText.lastIndexOf('}');\n  if (s !== -1 && e2 !== -1) { try { parsed = JSON.parse(rawText.substring(s, e2+1)); } catch(e) {} }\n}\nif (!parsed) { parsed = { title: '', shortTitle: '', description: '', keyPoints: [], sections: [], importantTerms: [], recapQuestions: [], note: rawText }; }\n\nconst meta = $('Przygotuj Metadane i Tryb').first().json;\nconst title = String(parsed.title || meta.title);\nconst shortTitle = String(parsed.shortTitle || title);\nconst description = String(parsed.description || '');\nconst note = String(parsed.note || '');\nconst keyPoints = Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [];\nconst sections = Array.isArray(parsed.sections) ? parsed.sections : [];\nconst importantTerms = Array.isArray(parsed.importantTerms) ? parsed.importantTerms : [];\nconst recapQuestions = Array.isArray(parsed.recapQuestions) ? parsed.recapQuestions : [];\n\n// Konwertuj tablice obiektow do Firestore arrayValue\nconst toStrArr = function(arr) { return { arrayValue: { values: arr.map(function(s) { return { stringValue: String(s) }; }) } }; };\nconst toJsonArr = function(arr) { return { arrayValue: { values: arr.map(function(o) { return { stringValue: JSON.stringify(o) }; }) } }; };\n\nconst firestoreBody = JSON.stringify({ fields: {\n  materialId: { stringValue: meta.docId },\n  classId: { stringValue: meta.classId },\n  teacherId: { stringValue: meta.teacherId },\n  title: { stringValue: title },\n  shortTitle: { stringValue: shortTitle },\n  description: { stringValue: description },\n  keyPoints: toStrArr(keyPoints),\n  sections: toJsonArr(sections),\n  importantTerms: toJsonArr(importantTerms),\n  recapQuestions: toJsonArr(recapQuestions),\n  note: { stringValue: note },\n  pdfUrl: { stringValue: meta.pdfUrl },\n  storagePath: { stringValue: meta.storagePath },\n  fileName: { stringValue: meta.fileName },\n  source: { stringValue: 'pdf_material' },\n  type: { stringValue: 'additional_material' },\n  category: { stringValue: 'additional_materials' },\n  processingStatus: { stringValue: 'done' },\n  status: { stringValue: 'done' },\n  timestamp: { stringValue: meta.timestamp },\n  createdAt: { stringValue: meta.timestamp }\n}});\n\nreturn [{ json: { ...meta, title, shortTitle, description, note, firestoreBody } }];"
+      },
+      "id": "dc24709f-73b3-45ba-9140-296e67bf34e3",
+      "name": "Parsuj Materiał GPT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/materials/{{ $json.docId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "472173d7-8c0d-426c-bd2a-fede8b1e0221",
+      "name": "Firestore — Zapisz Materiał",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1920,
+        192
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "Unauthorized"
+        },
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "b3a40169-7aa0-4737-bdb9-0774be731945",
+      "name": "Odpowiedz 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        288
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Przyjmij PDF": {
+      "main": [
+        [
+          {
+            "node": "Sprawdź Secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprawdź Secret": {
+      "main": [
+        [
+          {
+            "node": "Przygotuj Metadane i Tryb",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Przygotuj Metadane i Tryb": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedz Przyjęto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odpowiedz Przyjęto": {
+      "main": [
+        [
+          {
+            "node": "Pobierz PDF z URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pobierz PDF z URL": {
+      "main": [
+        [
+          {
+            "node": "Tryb Lesson czy Material?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tryb Lesson czy Material?": {
+      "main": [
+        [
+          {
+            "node": "GPT — Generuj Lekcję z PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GPT — Generuj Materiał z PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Generuj Lekcję z PDF": {
+      "main": [
+        [
+          {
+            "node": "Parsuj Lekcję GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj Lekcję GPT": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Lekcję PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Zapisz Lekcję PDF": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Pobierz Uczniów (lesson)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Pobierz Uczniów (lesson)": {
+      "main": [
+        [
+          {
+            "node": "Buduj Taski Uczniów",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buduj Taski Uczniów": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Taski",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT — Generuj Materiał z PDF": {
+      "main": [
+        [
+          {
+            "node": "Parsuj Materiał GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsuj Materiał GPT": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Materiał",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "f640c30d-04ab-4cb7-b6ca-0c72a20b9e18",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "137501ae642560edd95a76486297d6e65c2c243dbdba68938b6b204fd0911415"
+  },
+  "id": "nfbR8moqWHXimZyY",
+  "tags": []
+}

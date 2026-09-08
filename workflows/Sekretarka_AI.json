@@ -1,0 +1,749 @@
+{
+  "name": "Sekretarka AI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-phone-actions",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "349859d4-322b-481e-a052-d8ab1fdf2414",
+      "name": "During Call Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        512
+      ],
+      "webhookId": "5f8dc09f-dd66-46f9-9c05-76d619b73482"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "knowledge_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Knowledge Query"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "calendar_check",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Calendar Check"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "calendar_book",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Calendar Book"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send_offer_email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Send Email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "deef7158-0902-43eb-8efa-afcedbbb2aa4",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "<__PLACEHOLDER_VALUE__knowledge_base__>",
+        "limit": 5,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "<__PLACEHOLDER_VALUE__topic__>",
+              "condition": "ilike",
+              "keyValue": "={{ $json.query }}"
+            }
+          ]
+        }
+      },
+      "id": "9b36e249-5181-42de-a593-0ed990607a02",
+      "name": "Query Knowledge Base",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        800,
+        208
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "Z4uXzQ17XMRBwfAn",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "mikziop348@gmail.com",
+          "mode": "list",
+          "cachedResultName": "mikziop348@gmail.com"
+        },
+        "timeMin": "={{ $json.startTime }}",
+        "timeMax": "={{ $json.endTime }}",
+        "options": {
+          "outputFormat": "availability"
+        }
+      },
+      "id": "d13591fe-bdc4-4bab-8e30-1f693ec54417",
+      "name": "Check Calendar Availability",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        400
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "DNmnjFLePeH9fyT3",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "mikziop348@gmail.com",
+          "mode": "list",
+          "cachedResultName": "mikziop348@gmail.com"
+        },
+        "start": "={{ $json.startTime }}",
+        "end": "={{ $json.endTime }}",
+        "additionalFields": {
+          "attendees": "={{ $json.clientEmail }}",
+          "description": "={{ $json.notes ?? \"Booked via AI phone secretary\" }}",
+          "location": "={{ $json.location ?? \"Video call\" }}",
+          "summary": "={{ $json.meetingTitle ?? \"Client Meeting\" }}"
+        }
+      },
+      "id": "36172c29-0fd5-453d-a82f-17beb73c3ef1",
+      "name": "Book Meeting",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        592
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "DNmnjFLePeH9fyT3",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.clientEmail }}",
+        "subject": "={{ $json.offerSubject ?? \"Your Requested Offer\" }}",
+        "message": "={{ $json.offerContent }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "ab76aa04-f00b-4f77-a369-e16854ce0dc5",
+      "name": "Send Offer Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        752
+      ],
+      "webhookId": "5249b680-9989-4982-bd64-e81f666191cd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KdfgutLCxLP7uCmR",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-phone-call-ended",
+        "options": {}
+      },
+      "id": "9988e25e-5d99-4ee9-93d1-b112fc8b6bfb",
+      "name": "Post-Call Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        912
+      ],
+      "webhookId": "5dd885c5-3eab-4bca-b548-598bb2704859"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this phone conversation transcript:\n\nTranscript: {{ $json.transcript }}\nCustomer: {{ $json.customerName }}\nDuration: {{ $json.duration }} seconds\n\nExtract:\n1. Brief summary\n2. Lead score: hot/warm/cold\n3. Main inquiry topic\n4. Customer contact details\n5. Next steps",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert sales analyst."
+        }
+      },
+      "id": "824bc1ce-79cf-4f7b-b6c8-2998336d014b",
+      "name": "Analyze Conversation",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        464,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "10506286-a014-451d-9de1-37f847052462",
+      "name": "OpenAI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        1120
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "PIOikNDLrB8AFWYQ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"summary\": \"Brief summary\", \"leadScore\": \"hot\", \"inquiryTopic\": \"pricing\", \"customerName\": \"John Doe\", \"customerEmail\": \"john@example.com\", \"customerPhone\": \"+48123456789\", \"nextSteps\": \"Follow up\" }"
+      },
+      "id": "4067513a-fed7-44b0-bfff-dc9ea057b0fe",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "documents",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "transcript",
+              "fieldValue": "={{ $(\"Post-Call Webhook\").item.json.transcript }}"
+            },
+            {
+              "fieldId": "duration",
+              "fieldValue": "={{ $(\"Post-Call Webhook\").item.json.duration }}"
+            },
+            {
+              "fieldId": "customer_name",
+              "fieldValue": "={{ $json.output.customerName }}"
+            },
+            {
+              "fieldId": "customer_email",
+              "fieldValue": "={{ $json.output.customerEmail }}"
+            },
+            {
+              "fieldId": "customer_phone",
+              "fieldValue": "={{ $json.output.customerPhone }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $json.output.summary }}"
+            },
+            {
+              "fieldId": "lead_score",
+              "fieldValue": "={{ $json.output.leadScore }}"
+            },
+            {
+              "fieldId": "inquiry_topic",
+              "fieldValue": "={{ $json.output.inquiryTopic }}"
+            },
+            {
+              "fieldId": "next_steps",
+              "fieldValue": "={{ $json.output.nextSteps }}"
+            },
+            {
+              "fieldId": "meeting_booked",
+              "fieldValue": "={{ $(\"Post-Call Webhook\").item.json.meetingBooked }}"
+            }
+          ]
+        }
+      },
+      "id": "4a1b9db0-27f5-4898-9bc0-b73d15fa80a8",
+      "name": "Save Call Data",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        816,
+        912
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "Z4uXzQ17XMRBwfAn",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Analyze Conversation\").item.json.output.leadScore }}",
+              "rightValue": "hot",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "437e5c16-f204-486b-afae-a1e019ba733b",
+      "name": "Is Hot Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1040,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "7912263345",
+        "text": "=🔥 HOT LEAD!\n\nKlient: {{ $(\"Analyze Conversation\").item.json.output.customerName }}\nTelefon: {{ $(\"Analyze Conversation\").item.json.output.customerPhone }}\nEmail: {{ $(\"Analyze Conversation\").item.json.output.customerEmail }}\n\nTemat: {{ $(\"Analyze Conversation\").item.json.output.inquiryTopic }}\nPodsumowanie: {{ $(\"Analyze Conversation\").item.json.output.summary }}\n\nNastępne kroki: {{ $(\"Analyze Conversation\").item.json.output.nextSteps }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d37433a9-1b7d-40d1-a6b9-3b866122dae1",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        800
+      ],
+      "webhookId": "e678f884-e167-4445-8dea-7804c2db94e6",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Post-Call Webhook\").item.json.meetingBooked }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3514f0cb-ba84-4689-a631-436045ab4479",
+      "name": "Meeting Not Booked?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1264,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "minutes"
+      },
+      "id": "eeea3f62-c2a2-4ce7-aee2-becbfa884ccf",
+      "name": "Wait 15 Minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        1008
+      ],
+      "webhookId": "107b55e6-df66-4ced-8980-f342c9aaa988"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $(\"Analyze Conversation\").item.json.output.customerEmail }}",
+        "subject": "=Dziękujemy za rozmowę - {{ $(\"Analyze Conversation\").item.json.output.customerName }}",
+        "message": "=<p>Cześć {{ $(\"Analyze Conversation\").item.json.output.customerName }},</p><p>Dziękujemy za rozmowę w temacie {{ $(\"Analyze Conversation\").item.json.output.inquiryTopic }}.</p><p>{{ $(\"Analyze Conversation\").item.json.output.summary }}</p><p>Chętnie odpowiemy na wszelkie pytania!</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "57a44444-17af-4e1e-84fe-e2b66bf43da4",
+      "name": "First Follow-up Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1712,
+        1008
+      ],
+      "webhookId": "fc74770d-e993-4860-9336-6fdc01c20612",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KdfgutLCxLP7uCmR",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "hours"
+      },
+      "id": "781aa67e-864c-4085-a0ef-e0bac7da1634",
+      "name": "Wait 1 Hour",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1936,
+        1008
+      ],
+      "webhookId": "ffd61981-c7df-47b4-9d9c-2ec930a02cb9"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $(\"Analyze Conversation\").item.json.output.customerEmail }}",
+        "subject": "=Dodatkowe informacje - {{ $(\"Analyze Conversation\").item.json.output.inquiryTopic }}",
+        "message": "=<p>Cześć {{ $(\"Analyze Conversation\").item.json.output.customerName }},</p><p>Przesyłam dodatkowe informacje dot. {{ $(\"Analyze Conversation\").item.json.output.inquiryTopic }}.</p><p>Czy chciałby Pan/Pani umówić rozmowę?</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b47c66f5-0e77-4462-b7e2-92ce5d4c83aa",
+      "name": "Second Follow-up Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2160,
+        1008
+      ],
+      "webhookId": "af00c27b-110f-4b89-934c-648cf3086495",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KdfgutLCxLP7uCmR",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 24,
+        "unit": "hours"
+      },
+      "id": "482c9114-546f-404f-b060-daf800468e3b",
+      "name": "Wait 24 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2384,
+        1008
+      ],
+      "webhookId": "9808605e-426e-4746-9ca3-6234c6c8d8f7"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $(\"Analyze Conversation\").item.json.output.customerEmail }}",
+        "subject": "=Czy nadal jesteś zainteresowany - {{ $(\"Analyze Conversation\").item.json.output.inquiryTopic }}?",
+        "message": "=<p>Cześć {{ $(\"Analyze Conversation\").item.json.output.customerName }},</p><p>Ostatnia wiadomość w temacie {{ $(\"Analyze Conversation\").item.json.output.inquiryTopic }}. Jeśli jesteś zainteresowany, chętnie umówię spotkanie!</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "114e4b5c-72c4-4728-9f1d-0c1270639406",
+      "name": "Final Follow-up Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2608,
+        1008
+      ],
+      "webhookId": "b1007bf3-f970-4baa-a55d-50d04f64277f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KdfgutLCxLP7uCmR",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "During Call Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Query Knowledge Base",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Calendar Availability",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Book Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Offer Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post-Call Webhook": {
+      "main": [
+        [
+          {
+            "node": "Analyze Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Conversation": {
+      "main": [
+        [
+          {
+            "node": "Save Call Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze Conversation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analyze Conversation",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Call Data": {
+      "main": [
+        [
+          {
+            "node": "Is Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Meeting Not Booked?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meeting Not Booked?": {
+      "main": [
+        [
+          {
+            "node": "Wait 15 Minutes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "First Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First Follow-up Email": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 Hour",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 Hour": {
+      "main": [
+        [
+          {
+            "node": "Second Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Second Follow-up Email": {
+      "main": [
+        [
+          {
+            "node": "Wait 24 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 24 Hours": {
+      "main": [
+        [
+          {
+            "node": "Final Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "c8f62e35-dfd9-4f23-9224-78dbf867a4d7",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "instanceId": "f45a476f11f2ebaa7feb1a9515e40b5417425ca2379a7d5263a021abbd44c13d"
+  },
+  "id": "SxPIc48HONIbLTGY",
+  "tags": []
+}

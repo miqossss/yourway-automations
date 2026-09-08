@@ -1,0 +1,562 @@
+{
+  "name": "Analiza CV i pomocnik rekrutera",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "has:attachment (subject:CV OR subject:aplikacja OR subject:rekrutacja)",
+          "readStatus": "unread"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "id": "56c22998-c8e8-40f9-9bf6-c7e76b08eac8",
+      "name": "Monitor CV Emails",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        400
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KdfgutLCxLP7uCmR",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ Object.keys($binary).length }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0,
+              "id": "90eb40f4-0b21-4a41-bf93-36a9dec0cea7"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "15bb1552-a5be-4593-941d-a2e6c0e908e7",
+      "name": "Has Attachment?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        464,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {
+          "joinPages": true
+        }
+      },
+      "id": "c14eb968-75c0-43c1-a582-e1dabb767d0f",
+      "name": "Extract CV Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Przeanalizuj to CV i oceń kandydata na stanowisko w naszej firmie IT.\n\nWYMAGANIA:\n- Umiejętności techniczne: JavaScript, HTML, CSS, SQL, PHP, Python\n- Wykształcenie: Ukończone studia informatyczne\n- Doświadczenie: Ponad 5 lat doświadczenia zawodowego\n- Umiejętności specjalne: Umiejętność automatyzacji AI\n\nTEKST CV:\n{{ $('Extract CV Text').item.json.data }}\n\nZASADY PUNKTACJI:\n- Ocena w skali 0-100 na podstawie dopasowania do wymagań\n- GORĄCE (>75): Silne dopasowanie, rekomendacja natychmiastowej rozmowy kwalifikacyjnej\n- CIEPŁE (50-75): Duży potencjał, warto rozważyć kandydaturę\n- ZIMNE (<50): Nie spełnia minimalnych wymagań\n\nWypisz: imię i nazwisko kandydata, lata doświadczenia, listę umiejętności, mocne strony, potencjalne ryzyko.\nPodaj rekomendację: GORĄCE, CIEPŁE lub ZIMNE.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert HR recruiter analyzing CVs for IT positions. Be objective and thorough in your assessment."
+        }
+      },
+      "id": "0598609a-1d59-464e-8b16-58313e98f3b5",
+      "name": "Analyze CV",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1136,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "4e0e4a05-2f2b-4183-996d-ec6377b90d79",
+      "name": "GPT-4o Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1088,
+        528
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "PIOikNDLrB8AFWYQ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"candidateName\": \"Jan Kowalski\", \"score\": 85, \"recommendation\": \"HOT\", \"yearsOfExperience\": 5, \"skills\": \"JavaScript, HTML, CSS, SQL, PHP, Python, AI automation\", \"strengths\": \"Strong full-stack experience, AI automation skills\", \"risks\": \"Limited cloud experience\" }"
+      },
+      "id": "e14f7860-faee-4df3-91ad-af0317967a51",
+      "name": "CV Analysis Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1344,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "Imie i nazwisko",
+              "value": "={{ $json.candidateName }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "Ocena leada",
+              "value": "={{ $json.score }}",
+              "type": "number"
+            },
+            {
+              "id": "3",
+              "name": "Lata doswiadczenia",
+              "value": "={{ $json.yearsOfExperience }}",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "Timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "Umiejetnosci",
+              "value": "={{ $json.skills }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "CV Link",
+              "value": "={{ $('Upload CV to Drive').item.json.webViewLink }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "Recommendation",
+              "value": "={{ $json.recommendation }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "76cda2ae-7502-4bf8-a42f-569d428d208b",
+      "name": "Prepare Sheet Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1488,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1fY8pq7-GT4XpHbMCXdmIDBPoG_ayAUnPSZYLJ5P4Ec8",
+          "mode": "list",
+          "cachedResultName": "analiza"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Imie i nazwisko": "={{ $json[\"Imie i nazwisko\"] }}",
+            "Ocena leada": "={{ $json[\"Ocena leada\"] }}",
+            "Lata doswiadczenia": "={{ $json[\"Lata doswiadczenia\"] }}",
+            "Time stamp": "={{ $json.Timestamp }}",
+            "Umiejetnosci": "={{ $json.Umiejetnosci }}",
+            "Link do CV": "={{ $json[\"CV Link\"] }}",
+            "Rekomendacja": "={{ $json.Recommendation }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Imie i nazwisko",
+              "displayName": "Imie i nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ocena leada",
+              "displayName": "Ocena leada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lata doswiadczenia",
+              "displayName": "Lata doswiadczenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Time stamp",
+              "displayName": "Time stamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Umiejetnosci",
+              "displayName": "Umiejetnosci",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link do CV",
+              "displayName": "Link do CV",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Rekomendacja",
+              "displayName": "Rekomendacja",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "753c806d-4706-41a7-a5af-ec045e4cb4b5",
+      "name": "Log to Analiza Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1712,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ICLmp4YJTS1zWn7V",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "message",
+              "value": "=🎯 *Nowy Kandydat: {{ $('Analyze CV').item.json.candidateName }}*\n\n📊 *Ocena:* {{ $('Analyze CV').item.json.score }}/100\n🔥 *Rekomendacja:* {{ $('Analyze CV').item.json.recommendation }}\n💼 *Doswiadczenie:* {{ $('Analyze CV').item.json.yearsOfExperience }} lat\n\n✅ *Umiejetnosci:*\n{{ $('Analyze CV').item.json.skills }}\n\n💪 *Mocne strony:*\n{{ $('Analyze CV').item.json.strengths }}\n\n⚠️ *Ryzyka:*\n{{ $('Analyze CV').item.json.risks }}\n\n📄 *CV:* {{ $('Upload CV to Drive').item.json.webViewLink }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9afaa322-0707-42fd-a2f9-94474dd75229",
+      "name": "Prepare Telegram Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1936,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "7912263345",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "disable_web_page_preview": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "971e1d89-ff8f-4751-b706-302ccbe32958",
+      "name": "Notify Recruiter",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2160,
+        304
+      ],
+      "webhookId": "9baf3ec0-0377-49c8-9c72-ee9425b7a88a",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7912263345",
+        "text": "=📧 *Email bez załącznika CV*\n\n*Temat:* {{ $json.subject }}\n*Od:* {{ $json.from }}\n*Data:* {{ $json.date }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "5455f8eb-cbde-4cd3-84ef-c1f99c75a2df",
+      "name": "No Attachment Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        560
+      ],
+      "webhookId": "ca58c364-df2a-4d19-b540-5d26a71abb3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "E7ZDKZ0atcABn7rI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "attachment_0",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1NkEam6WN7vDOh28jqlnp9hB2nszut62-",
+          "mode": "list",
+          "cachedResultName": "analiza cv",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1NkEam6WN7vDOh28jqlnp9hB2nszut62-"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        688,
+        304
+      ],
+      "id": "d6b20649-4461-4e60-a7c2-beeb0794e51f",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9ElzK0wfmCthwm1p",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Monitor CV Emails": {
+      "main": [
+        [
+          {
+            "node": "Has Attachment?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Attachment?": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Attachment Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV Text": {
+      "main": [
+        [
+          {
+            "node": "Analyze CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze CV": {
+      "main": [
+        [
+          {
+            "node": "Prepare Sheet Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze CV",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CV Analysis Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analyze CV",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Sheet Data": {
+      "main": [
+        [
+          {
+            "node": "Log to Analiza Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Analiza Sheet": {
+      "main": [
+        [
+          {
+            "node": "Prepare Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Notify Recruiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Extract CV Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "df57796e-039a-40fb-b880-d3e511250eca",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f45a476f11f2ebaa7feb1a9515e40b5417425ca2379a7d5263a021abbd44c13d"
+  },
+  "id": "SxVA3jJOutzg7rsg",
+  "tags": []
+}

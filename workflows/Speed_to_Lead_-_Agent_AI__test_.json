@@ -1,0 +1,501 @@
+{
+  "name": "Speed to Lead - Agent AI (test)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "s2l-agent-test",
+        "options": {}
+      },
+      "id": "c0855074-7b7f-45d8-be2d-5bc7f057ba76",
+      "name": "Lead Webhook (test)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        192
+      ],
+      "webhookId": "d2735d2f-f171-4bd5-8639-1f2466b82bed"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "imie_nazwisko",
+              "value": "={{ $json.body?.imie_nazwisko ?? $json.imie_nazwisko ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "email",
+              "value": "={{ $json.body?.email ?? $json.email ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "telefon",
+              "value": "={{ $json.body?.telefon ?? $json.telefon ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "firma",
+              "value": "={{ $json.body?.firma ?? $json.firma ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "branza",
+              "value": "={{ $json.body?.branza ?? $json.branza ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "cel",
+              "value": "={{ $json.body?.cel ?? $json.cel ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "wiadomosc",
+              "value": "={{ $json.body?.wiadomosc ?? $json.wiadomosc ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a8",
+              "name": "data_zgloszenia",
+              "value": "={{ $json.body?.data_zgloszenia ?? $json.data_zgloszenia ?? $now.toFormat(\"dd.MM.yyyy, HH:mm:ss\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "424fc19e-d9aa-4d3b-b630-1a63223dfdcd",
+      "name": "Normalizuj dane leada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Dane zgloszenia leada:\nImie i nazwisko: {{ $json.imie_nazwisko }}\nFirma: {{ $json.firma }}\nBranza: {{ $json.branza }}\nTelefon: {{ $json.telefon }}\nEmail: {{ $json.email }}\nCel kontaktu: {{ $json.cel }}\nWiadomosc: {{ $json.wiadomosc }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Jestes asystentem AI firmy YourWay AI (automatyzacje i wdrozenia AI dla firm).\nTwoim zadaniem jest natychmiastowa, spersonalizowana pierwsza odpowiedz na nowe zgloszenie leada z formularza kontaktowego oraz jego kwalifikacja.\nNapisz krotka (4-8 zdan), ciepla, konkretna odpowiedz e-mail do leada, nawiazujaca do tresci pol \"cel\" i \"wiadomosc\" oraz jego branzy. Odpowiedz na ewentualne pytania, jesli padly.\nZaproponuj rozmowe i podaj link do kalendarza: https://calendly.com/mikziop348/new-meeting jako mozliwosc samodzielnego umowienia terminu. Podpisz sie jako \"Zespol YourWay AI\".\nWAZNE (wymog prawny z art. 50 unijnego AI Act): na koncu wiadomosci dodaj jednozdaniowa, widoczna informacje, ze odpowiedz zostala wygenerowana automatycznie przez asystenta AI, np. \"Ta wiadomosc zostala wygenerowana automatycznie przez asystenta AI YourWay AI.\"\nNastepnie ocen, czy to \"goracy lead\" (wysoki potencjal, warto zadzwonic od razu) na podstawie: konkretnosci celu, pilnosci, wzmianek o budzecie lub terminie, dopasowania do oferty YourWay AI (automatyzacje, agenci AI, wdrozenia n8n). Ustaw priorytet: \"wysoki\", \"sredni\" lub \"niski\" i krotkie uzasadnienie.\nZwroc wynik WYLACZNIE w zdefiniowanym formacie JSON."
+        }
+      },
+      "id": "5e1b066f-63cc-47be-8a90-49ea9abc9edf",
+      "name": "AI Agent - kwalifikacja i odpowiedz",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "f6da8678-64ce-43b7-8ddd-d1072d5f8614",
+      "name": "OpenAI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        432,
+        416
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "zs24nruEOBT9SP9H",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"odpowiedz_email\": \"Czesc Aniu, dziekujemy za zgloszenie! Ta wiadomosc zostala wygenerowana automatycznie przez asystenta AI YourWay AI.\", \"temat_email\": \"Re: Twoje zgloszenie do YourWay AI\", \"goracy_lead\": true, \"priorytet\": \"wysoki\", \"uzasadnienie\": \"Lead podal konkretny budzet i pilny termin wdrozenia, wysokie dopasowanie do oferty.\" }"
+      },
+      "id": "06f4b0fe-f00f-4ed0-a449-6ee854888892",
+      "name": "Parser struktury JSON",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "kontakt@yourwayai.pl",
+        "toEmail": "={{ $('Normalizuj dane leada').item.json.email }}",
+        "subject": "={{ $json.output.temat_email }}",
+        "emailFormat": "text",
+        "text": "={{ $json.output.odpowiedz_email }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "77651e05-4d2d-4e98-aa16-4419f8859e23",
+      "name": "Wyslij odpowiedz do leada",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        800,
+        0
+      ],
+      "webhookId": "7fb59390-af57-4909-b3be-ab9a49b74863",
+      "credentials": {
+        "smtp": {
+          "id": "PV0GeZ9lvYgwlJyD",
+          "name": "SMTP account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.output.goracy_lead }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "rightValue": true
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "43bcdc38-052d-4e4c-ae12-832bb0d703e2",
+      "name": "Czy goracy lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "7912263345",
+        "text": "=Goracy lead z formularza!\n\nImie: {{ $(\"Normalizuj dane leada\").item.json.imie_nazwisko }}\nFirma: {{ $(\"Normalizuj dane leada\").item.json.firma }}\nTelefon: {{ $(\"Normalizuj dane leada\").item.json.telefon }}\nEmail: {{ $(\"Normalizuj dane leada\").item.json.email }}\nCel: {{ $(\"Normalizuj dane leada\").item.json.cel }}\nWiadomosc: {{ $(\"Normalizuj dane leada\").item.json.wiadomosc }}\n\nOcena AI - priorytet: {{ $json.output.priorytet }}\nUzasadnienie: {{ $json.output.uzasadnienie }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "cee97d90-fc90-432f-a171-ffaa1ab8b9c9",
+      "name": "Powiadom zespol (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        176
+      ],
+      "webhookId": "36a55ce4-f245-4909-8649-16770be9552d",
+      "credentials": {
+        "telegramApi": {
+          "id": "lt3XDnKlKiKHhEt3",
+          "name": "Telegram account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "MPTfzb0BbhucgoCh",
+          "cachedResultName": "s2l_agent_test_leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "imie_nazwisko": "={{ $('Normalizuj dane leada').item.json.imie_nazwisko }}",
+            "email": "={{ $('Normalizuj dane leada').item.json.email }}",
+            "telefon": "={{ $('Normalizuj dane leada').item.json.telefon }}",
+            "firma": "={{ $('Normalizuj dane leada').item.json.firma }}",
+            "branza": "={{ $('Normalizuj dane leada').item.json.branza }}",
+            "cel": "={{ $('Normalizuj dane leada').item.json.cel }}",
+            "wiadomosc": "={{ $('Normalizuj dane leada').item.json.wiadomosc }}",
+            "data_zgloszenia": "={{ $('Normalizuj dane leada').item.json.data_zgloszenia }}",
+            "goracy_lead": "={{ $json.output.goracy_lead }}",
+            "priorytet": "={{ $json.output.priorytet }}",
+            "uzasadnienie_ai": "={{ $json.output.uzasadnienie }}",
+            "odpowiedz_ai": "={{ $json.output.odpowiedz_email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "imie_nazwisko",
+              "displayName": "imie_nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "telefon",
+              "displayName": "telefon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "firma",
+              "displayName": "firma",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "branza",
+              "displayName": "branza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cel",
+              "displayName": "cel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "wiadomosc",
+              "displayName": "wiadomosc",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "data_zgloszenia",
+              "displayName": "data_zgloszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "goracy_lead",
+              "displayName": "goracy_lead",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "removed": false
+            },
+            {
+              "id": "priorytet",
+              "displayName": "priorytet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "uzasadnienie_ai",
+              "displayName": "uzasadnienie_ai",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "odpowiedz_ai",
+              "displayName": "odpowiedz_ai",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "08dfd499-a6b5-4db4-a65f-fe9f7c76f429",
+      "name": "Zapisz lead i ocene AI",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/convai/twilio/outbound-call",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"agent_id\": \"agent_6201m14m7jx5eavs2t9fn72hqebw\",\n  \"agent_phone_number_id\": \"phnum_5301m18xzgg6fz4tq6zfbmb2rw7f\",\n  \"to_number\": $('Normalizuj dane leada').item.json.telefon,\n  \"conversation_initiation_client_data\": {\n    \"dynamic_variables\": {\n      \"lead_imie\": $('Normalizuj dane leada').item.json.imie_nazwisko,\n      \"lead_firma\": $('Normalizuj dane leada').item.json.firma,\n      \"lead_branza\": $('Normalizuj dane leada').item.json.branza,\n      \"lead_cel\": $('Normalizuj dane leada').item.json.cel,\n      \"lead_wiadomosc\": $('Normalizuj dane leada').item.json.wiadomosc\n    }\n  }\n} }}",
+        "options": {}
+      },
+      "id": "a5d25493-1cea-4692-b8c4-e411c2766b28",
+      "name": "Zadzwoń do leada (ElevenLabs)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1056,
+        384
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "up5949hRjC3xPwVf",
+          "name": "ElevenLabs API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Lead Webhook (test)": {
+      "main": [
+        [
+          {
+            "node": "Normalizuj dane leada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizuj dane leada": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - kwalifikacja i odpowiedz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - kwalifikacja i odpowiedz": {
+      "main": [
+        [
+          {
+            "node": "Wyslij odpowiedz do leada",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Czy goracy lead?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Zapisz lead i ocene AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - kwalifikacja i odpowiedz",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser struktury JSON": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent - kwalifikacja i odpowiedz",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Czy goracy lead?": {
+      "main": [
+        [
+          {
+            "node": "Powiadom zespol (Telegram)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Zadzwoń do leada (ElevenLabs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "63054dfd-f3ff-4dd8-8766-578d24f8f7ee",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "5f78c1f6b24ecfe1be6b04cdd110b08d83cceacf851b91f26c829dd563be8133"
+  },
+  "nodeGroups": [],
+  "id": "jkvvPd4kI6PA4SEy",
+  "tags": []
+}

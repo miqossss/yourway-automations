@@ -1,0 +1,436 @@
+{
+  "name": "EduFlow — Wysyłka Zaproszenia",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eduflow-invite",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "86a6e16a-23f7-494a-b529-6d23b05a9ad8",
+      "name": "Webhook — Nowe Zaproszenie",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        192
+      ],
+      "webhookId": "94583ede-026f-4002-b625-8cbbf51cea89"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst studentEmail = String(body.studentEmail || body.email || '').trim().toLowerCase();\nif (!studentEmail) {\n  return [{ json: { error: true, reason: 'Brak adresu email ucznia' } }];\n}\n// Uzyj invitationId i code z Firestore jesli przysly z frontendu\n// Jesli nie - wygeneruj (fallback)\nconst invitationId = body.invitationId || ('inv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));\nconst code = body.code || String(Math.floor(100000 + Math.random() * 900000));\nconst now = new Date().toISOString();\nreturn [{ json: {\n  invitationId,\n  studentEmail,\n  classId: body.classId || '',\n  teacherName: body.teacherName || 'Nauczyciel',\n  className: body.className || '',\n  code,\n  createdAt: now,\n  error: false\n}}];"
+      },
+      "id": "70f4ba7a-a344-4d73-8706-1c0a6989a3fd",
+      "name": "Przygotuj Dane Zaproszenia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.error }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "773245d2-c908-47f5-86e0-5e87d87340a3",
+      "name": "Dane OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/invitations/{{ $json.invitationId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "081dec3c-03e9-4fcd-bc42-5583faea0385",
+      "name": "Firestore — Sprawdź Status Zaproszenia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.fields?.emailStatus?.stringValue }}",
+              "rightValue": "sent",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "65a3ed66-fadf-47ac-8c95-111544cf4678",
+      "name": "Już Wysłano?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "Email zaproszenia zostal juz wyslany na ten adres",
+          "invitationId": "={{ $(\"Przygotuj Dane Zaproszenia\").item.json.invitationId }}"
+        },
+        "options": {
+          "responseCode": 409
+        }
+      },
+      "id": "ce7f3126-4ee9-4686-9b93-f049f710757d",
+      "name": "Odpowiedz Duplikat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "invitationId": "={{ $(\"Przygotuj Dane Zaproszenia\").item.json.invitationId }}",
+          "message": "Zaproszenie przyjete, email zostanie wyslany"
+        },
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "0ffac52a-9a5a-47aa-8bc7-c3ac9553b847",
+      "name": "Odpowiedz Przyjęto",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Przygotuj Dane Zaproszenia').first().json;\nconst firestoreBody = JSON.stringify({ fields: {\n  invitationId: { stringValue: d.invitationId },\n  email: { stringValue: d.studentEmail },\n  classId: { stringValue: d.classId },\n  code: { stringValue: d.code },\n  status: { stringValue: 'pending' },\n  emailStatus: { stringValue: 'sending' },\n  sendAttempts: { integerValue: '0' },\n  createdAt: { stringValue: d.createdAt },\n  updatedAt: { stringValue: new Date().toISOString() }\n}});\nreturn [{ json: { ...d, firestoreBody } }];"
+      },
+      "id": "ebd7ad33-c6c9-4c68-9dae-8aa6e3176ac0",
+      "name": "Buduj Status Sending",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/invitations/{{ $json.invitationId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "22d3e3d9-3f6b-4d75-a1d6-047142ae35a2",
+      "name": "Firestore — Zapisz Zaproszenie",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        192
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "kontakt@yourwayai.pl",
+        "toEmail": "={{ $(\"Przygotuj Dane Zaproszenia\").item.json.studentEmail }}",
+        "subject": "Zaproszenie do EduFlow — Twój kod dostępu",
+        "html": "=<div style=\"font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);\">\n  <div style=\"background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 32px 40px; text-align: center;\">\n    <h1 style=\"color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;\">🎓 EduFlow</h1>\n    <p style=\"color: #bfdbfe; margin: 8px 0 0; font-size: 16px;\">Twoje zaproszenie do klasy</p>\n  </div>\n  <div style=\"padding: 40px;\">\n    <p style=\"font-size: 16px; color: #1f2937; margin-top: 0;\">Cześć!</p>\n    <p style=\"font-size: 16px; color: #374151;\">Nauczyciel <strong>{{ $(\"Przygotuj Dane Zaproszenia\").item.json.teacherName }}</strong> zaprosił(a) Cię do klasy <strong>{{ $(\"Przygotuj Dane Zaproszenia\").item.json.className }}</strong> w aplikacji EduFlow.</p>\n    <p style=\"font-size: 16px; color: #374151;\">Twój jednorazowy kod do pierwszego logowania:</p>\n    <div style=\"background: #eff6ff; border: 2px solid #2563eb; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;\">\n      <div style=\"font-size: 42px; font-weight: 800; letter-spacing: 12px; color: #2563eb; font-family: 'Courier New', monospace;\">{{ $(\"Przygotuj Dane Zaproszenia\").item.json.code }}</div>\n      <p style=\"color: #6b7280; font-size: 13px; margin: 12px 0 0;\">Kod jednorazowy — przypisany do Twojego adresu email</p>\n    </div>\n    <p style=\"font-size: 16px; color: #374151; font-weight: 600;\">Jak się zalogować:</p>\n    <ol style=\"color: #374151; font-size: 15px; line-height: 1.8; padding-left: 20px;\">\n      <li>Wejdź na stronę <strong>EduFlow</strong></li>\n      <li>Wybierz opcję <strong>Jestem uczniem</strong></li>\n      <li>Wpisz swój adres email: <strong>{{ $(\"Przygotuj Dane Zaproszenia\").item.json.studentEmail }}</strong></li>\n      <li>Wpisz powyższy <strong>6-cyfrowy kod</strong></li>\n      <li>Ustaw własne hasło do konta</li>\n    </ol>\n    <div style=\"background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin: 24px 0;\">\n      <p style=\"margin: 0; color: #92400e; font-size: 14px;\"><strong>⚠️ Ważne:</strong> Jeśli mail nie dojdzie lub kod nie działa, skontaktuj się z nauczycielem — może wygenerować nowy kod.</p>\n    </div>\n    <p style=\"color: #9ca3af; font-size: 13px; text-align: center; margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 20px;\">Ten email został wysłany automatycznie przez EduFlow. Nie odpowiadaj na tę wiadomość.</p>\n  </div>\n</div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d8dad862-ee55-42ec-854b-ff53ad12a71a",
+      "name": "SMTP — Wyślij Email (próba 1)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1792,
+        192
+      ],
+      "webhookId": "cfb28536-d78e-4ba5-8837-1a7b26f4a872",
+      "credentials": {
+        "smtp": {
+          "id": "fX03pTUSJGb34Gbt",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Przygotuj Dane Zaproszenia').first().json;\nconst sentAt = new Date().toISOString();\nconst firestoreBody = JSON.stringify({ fields: {\n  emailStatus: { stringValue: 'sent' },\n  sentAt: { stringValue: sentAt },\n  sendAttempts: { integerValue: '1' },\n  lastAttemptAt: { stringValue: sentAt },\n  failReason: { stringValue: '' },\n  updatedAt: { stringValue: sentAt }\n}});\nreturn [{ json: { invitationId: d.invitationId, firestoreBody } }];"
+      },
+      "id": "b4cffc0d-fbf4-4565-8128-8e0bdb2f30b8",
+      "name": "Buduj Status Sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/eduflow-c3f19/databases/(default)/documents/invitations/{{ $json.invitationId }}?updateMask.fieldPaths=emailStatus&updateMask.fieldPaths=sentAt&updateMask.fieldPaths=sendAttempts&updateMask.fieldPaths=lastAttemptAt&updateMask.fieldPaths=failReason&updateMask.fieldPaths=updatedAt",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.firestoreBody }}",
+        "options": {}
+      },
+      "id": "f9a360b1-9bd5-4d22-9e3b-6667690629b7",
+      "name": "Firestore — Aktualizuj Status Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2240,
+        192
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "sFGDZBQsyXbOHHqn",
+          "name": "Google Service Account account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": false,
+          "reason": "={{ $json.reason }}"
+        },
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "aba4c422-05d3-4477-9074-99d68ef20cac",
+      "name": "Odpowiedz 400",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        288
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Nowe Zaproszenie": {
+      "main": [
+        [
+          {
+            "node": "Przygotuj Dane Zaproszenia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Przygotuj Dane Zaproszenia": {
+      "main": [
+        [
+          {
+            "node": "Dane OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dane OK?": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Sprawdź Status Zaproszenia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Sprawdź Status Zaproszenia": {
+      "main": [
+        [
+          {
+            "node": "Już Wysłano?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Już Wysłano?": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedz Duplikat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedz Przyjęto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odpowiedz Przyjęto": {
+      "main": [
+        [
+          {
+            "node": "Buduj Status Sending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buduj Status Sending": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Zapisz Zaproszenie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore — Zapisz Zaproszenie": {
+      "main": [
+        [
+          {
+            "node": "SMTP — Wyślij Email (próba 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMTP — Wyślij Email (próba 1)": {
+      "main": [
+        [
+          {
+            "node": "Buduj Status Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buduj Status Sent": {
+      "main": [
+        [
+          {
+            "node": "Firestore — Aktualizuj Status Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "b0356954-f840-4b02-8b6c-14d2d9bd79bc",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "137501ae642560edd95a76486297d6e65c2c243dbdba68938b6b204fd0911415"
+  },
+  "id": "W7hNtLnOA0JQBRkj",
+  "tags": []
+}

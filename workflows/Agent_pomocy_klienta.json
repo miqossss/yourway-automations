@@ -1,0 +1,509 @@
+{
+  "name": "Agent pomocy klienta",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ]
+        },
+        "options": {}
+      },
+      "id": "c7cfc476-9295-43d7-b3ea-cac939034ac4",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -864,
+        16
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KbRPdmInFwp4Sy3b",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "48bb2e0c-15a8-4f10-bca7-4d1d67ac7296",
+              "name": "emailBody",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "06a6a58d-58f8-42c7-a4d8-988d52565ec2",
+              "name": "threadID",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "e9624de8-55ce-4ceb-a47b-26ce1028f57b",
+              "name": "from",
+              "value": "={{ $json.to.value[0].address }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7c6cdc54-ee6c-467e-b1f7-423cb53e7fe7",
+      "name": "Set Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -704,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "fee4d4a6-d478-475c-939d-225a97eaa17e",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        0,
+        144
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Jld12CWRc5FVqXP9",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "customerSupportDocs",
+        "description": "Pobiera informacje o zasadach obsługi klienta oraz FAQ."
+      },
+      "id": "3d10678b-4b82-416e-9abb-b6f046da8e45",
+      "name": "Vector Store Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1,
+      "position": [
+        32,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "149f02de-0992-4240-a041-d45ae8270258",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        256,
+        416
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Jld12CWRc5FVqXP9",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2d3e2196-38a0-4ff5-bbf8-308b3426e00b",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        560
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Jld12CWRc5FVqXP9",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $fromAI(\"subject\") }}",
+        "message": "={{ $fromAI(\"emailBody\") }}",
+        "options": {
+          "threadId": "={{ $('Set Content').item.json.threadID }}",
+          "sendTo": "={{ $('Set Content').item.json.from }}"
+        }
+      },
+      "id": "318f207c-cc29-4c6d-8cc4-2f98d5c7fcaf",
+      "name": "createDraft",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        160
+      ],
+      "webhookId": "aa94fec5-4706-4d8d-89e0-ba0ebe17452e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KbRPdmInFwp4Sy3b",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Set Content').item.json.emailBody }}",
+        "options": {
+          "systemMessage": "# Rola systemowa\nJesteś wysoko wykwalifikowanym i empatycznym agentem obsługi klienta, specjalizującym się w tworzeniu profesjonalnych i pomocnych odpowiedzi na przychodzące e-maile.\n\n# Specyfikacja zadania\n1. Otrzymaj przychodzący e-mail od klienta.\n2. Użyj narzędzia **\"customerSupportDocs\"**, aby wyszukać odpowiednie polityki lub FAQ.\n3. Utwórz wersję roboczą odpowiedzi, używając narzędzia **\"createDraft\"**.\n4. Po utworzeniu wersji roboczej przygotuj krótkie podsumowanie treści e-maila.\n\nUpewnij się, że odpowiedź:\n- Bezpośrednio odnosi się do pytania klienta.\n- Zachowuje uprzejmy i profesjonalny ton.\n- Kończy się podpisem:\n  **\"Piotr, Pomoc dla każdego klienta\"**\n\n# Przypomnienia\n- Zawsze korzystaj z **\"customerSupportDocs\"**.\n- Zawsze finalizuj odpowiedź za pomocą **\"createDraft\"**.\n- Zachowuj uprzejmy, profesjonalny i empatyczny ton.\n"
+        }
+      },
+      "id": "2568a302-dcd3-4af6-b86b-4fc3e374bbbe",
+      "name": "Agent Pomocy Klienta",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Prompt:\nPrzeanalizuj treść poniższego e-maila i określ, czy dotyczy on obsługi klienta. Jeśli e-mail dotyczy któregokolwiek z poniższych tematów, ustaw customerSupport na true; w przeciwnym razie ustaw false.\n\nTematy obsługi klienta obejmują:\n\nPytania o status zamówienia, śledzenie lub zmiany\nProblemy z uszkodzonymi lub wadliwymi produktami\nProśby o zwrot pieniędzy lub zwrot produktu\nAnulowanie lub zmiany subskrypcji\nProblemy techniczne z produktem, stroną internetową lub aplikacją\nZapytania dotyczące płatności lub rozliczeń\nProśby o kontakt z przedstawicielem obsługi klienta\n- Zapytania o ofertę, produkty lub usługi firmy\n- Prośby o informacje lub wycenę\n- Pytania ogólne dotyczące działalności firmy\nWynik:\nZwróć wynik w formacie JSON z polem \"customerSupport\" ustawionym na true lub false.",
+              "role": "system"
+            },
+            {
+              "content": "=Tu jest przychodzący Mail: {{ $json.emailBody }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "id": "44d5a2b9-84ee-484e-9611-cae6087bf812",
+      "name": "Pomoc Klienta",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [
+        -528,
+        16
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Jld12CWRc5FVqXP9",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.content.customerSupport }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Pomoc"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3461ccc2-8323-4c31-b964-618240c03795",
+                    "leftValue": "={{ $json.message.content.customerSupport }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Brak Pomocy"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c745281c-071d-4ece-8cdc-8d91a7851f0d",
+      "name": "Pomoc?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -208,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "=7912263345",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "cc23ceca-ed25-43da-9695-cb7e7729dd9a",
+      "name": "Odpowiedź",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        0
+      ],
+      "webhookId": "3b1d38eb-861c-4cc3-9346-25ecbf1adb22",
+      "credentials": {
+        "telegramApi": {
+          "id": "KmfPjWLSMTX43iK5",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7912263345",
+        "text": "=Otrzymałeś wiadomość e-mail o {{ $now.format('hh:mm') }} o treści:\n\n{{ $('Set Content').item.json.emailBody }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c814e6aa-db26-4255-9ae0-a00f884f5ee3",
+      "name": "Odpowiedź bez Pomocy",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -864,
+        240
+      ],
+      "webhookId": "04e84fa0-6f8e-4276-8222-5a75d6b4673a",
+      "credentials": {
+        "telegramApi": {
+          "id": "KmfPjWLSMTX43iK5",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -160,
+        416
+      ],
+      "id": "6571beb2-47c2-42e1-8d9e-09a89be6f0ed",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "C7kWh5U5PzsmQIM0",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Content": {
+      "main": [
+        [
+          {
+            "node": "Pomoc Klienta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent Pomocy Klienta",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent Pomocy Klienta",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Vector Store Tool",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "createDraft": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent Pomocy Klienta",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Pomocy Klienta": {
+      "main": [
+        [
+          {
+            "node": "Odpowiedź",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pomoc Klienta": {
+      "main": [
+        [
+          {
+            "node": "Pomoc?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pomoc?": {
+      "main": [
+        [
+          {
+            "node": "Agent Pomocy Klienta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Odpowiedź bez Pomocy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Tool",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "41115d5e-adc0-4d56-bbf6-6079cd05028b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9ed45b2edb3846d2c35f1e402f2ca4aa845eac04c96ba15d9c52fcf48cf1564c"
+  },
+  "id": "kOgW64CS8SVMQhRS",
+  "tags": []
+}
