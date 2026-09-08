@@ -1,0 +1,469 @@
+{
+  "name": "Auto-responder na opinie Google - Pizzeria",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "e56254d0-5322-467e-b6e5-c4bd7af2b47f",
+      "name": "Co 30 minut",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "<__PLACEHOLDER_VALUE__Pełny URL: https://mybusiness.googleapis.com/v4/accounts/{accountId}/locations/{locationId}/reviews__>",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "9c92bac5-c235-403e-bcd1-26e9899611f2",
+      "name": "Pobierz opinie Google",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "reviews",
+        "options": {}
+      },
+      "id": "8ff25102-83d8-4083-9981-8a04e1cd2559",
+      "name": "Rozbij opinie",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "recenzje_odpowiedziane"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "reviewId",
+              "keyValue": "={{ $json.reviewId }}"
+            }
+          ]
+        }
+      },
+      "id": "a86978f2-321c-4a07-a674-f83524444814",
+      "name": "Sprawdź czy nowa",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Opinia klienta ({{ $json.reviewer.displayName }}, ocena: {{ $json.starRating }}):\n{{ $json.comment }}",
+        "options": {
+          "systemMessage": "Jesteś asystentem pizzerii odpowiadającym na opinie Google w imieniu właściciela. Piszesz krótko (2-4 zdania), ciepło i po polsku, zawsze dziękujesz za opinię. Dla ocen FOUR i FIVE: podziękuj i zaproś ponownie. Dla oceny THREE: podziękuj za feedback i zapewnij, że weźmiecie go pod uwagę. Dla ocen ONE i TWO: przeproś, nie tłumacz się nadmiernie, zaproponuj kontakt bezpośredni w celu wyjaśnienia sprawy (nie podawaj konkretnego numeru telefonu, napisz \"napiszcie do nas przez wiadomość na profilu\"). Nigdy nie wymyślaj faktów o zamówieniu klienta. Podpisz się jako \"Zespół Pizzerii\"."
+        }
+      },
+      "id": "f9f6de3e-1aab-487d-a938-0f59ac3b5039",
+      "name": "Wygeneruj odpowiedź",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "5187a08d-fb32-46f6-bf91-78a12fd10901",
+      "name": "Model OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        336
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "zs24nruEOBT9SP9H",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "or",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Sprawdź czy nowa').item.json.starRating }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "ONE"
+            },
+            {
+              "leftValue": "={{ $('Sprawdź czy nowa').item.json.starRating }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "TWO"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d5ede980-3447-4ea7-96fd-a150d3261974",
+      "name": "Niska ocena?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1248,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "recenzje_do_akceptacji"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "reviewId": "={{ $('Sprawdź czy nowa').item.json.reviewId }}",
+            "rating": "={{ $('Sprawdź czy nowa').item.json.starRating }}",
+            "draftReply": "={{ $json.output }}"
+          },
+          "schema": [
+            {
+              "id": "reviewId",
+              "displayName": "reviewId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rating",
+              "displayName": "rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "draftReply",
+              "displayName": "draftReply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4ab527b5-5110-463a-875f-629c4d946049",
+      "name": "Zapisz do akceptacji",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://mybusiness.googleapis.com/v4/{{ $('Sprawdź czy nowa').item.json.name }}:reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"comment\": $json.output } }}",
+        "options": {}
+      },
+      "id": "8ec056ea-328a-4ad1-af46-3163b7b68e06",
+      "name": "Opublikuj odpowiedź",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1472,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "recenzje_odpowiedziane"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "reviewId": "={{ $('Sprawdź czy nowa').item.json.reviewId }}",
+            "repliedAt": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "reviewId",
+              "displayName": "reviewId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "repliedAt",
+              "displayName": "repliedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7739d02c-31b4-44e3-8596-d5064d382511",
+      "name": "Zapisz jako odpowiedziane",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1696,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "watermark_start"
+        },
+        "limit": 1
+      },
+      "id": "fb591543-6587-48cc-8e2f-05d2fc28ea39",
+      "name": "Pobierz datę graniczną",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -16,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.createTime }}",
+              "operator": {
+                "operation": "after",
+                "type": "dateTime"
+              },
+              "rightValue": "={{ $('Pobierz datę graniczną').item.json.startDate }}"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "1cca328d-275f-4a2e-bf3d-139e7dfb528f",
+      "name": "Tylko nowe opinie",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        528,
+        352
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Pobierz opinie Google": {
+      "main": [
+        [
+          {
+            "node": "Rozbij opinie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprawdź czy nowa": {
+      "main": [
+        [
+          {
+            "node": "Wygeneruj odpowiedź",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wygeneruj odpowiedź": {
+      "main": [
+        [
+          {
+            "node": "Niska ocena?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Wygeneruj odpowiedź",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Niska ocena?": {
+      "main": [
+        [
+          {
+            "node": "Zapisz do akceptacji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Opublikuj odpowiedź",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opublikuj odpowiedź": {
+      "main": [
+        [
+          {
+            "node": "Zapisz jako odpowiedziane",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Co 30 minut": {
+      "main": [
+        [
+          {
+            "node": "Pobierz datę graniczną",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pobierz datę graniczną": {
+      "main": [
+        [
+          {
+            "node": "Pobierz opinie Google",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rozbij opinie": {
+      "main": [
+        [
+          {
+            "node": "Tylko nowe opinie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tylko nowe opinie": {
+      "main": [
+        [
+          {
+            "node": "Sprawdź czy nowa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "e4481037-8abb-4c7b-91bc-30f7b8bae881",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "5f78c1f6b24ecfe1be6b04cdd110b08d83cceacf851b91f26c829dd563be8133"
+  },
+  "nodeGroups": [],
+  "id": "ouqfxsBqAMOSvR1z",
+  "tags": []
+}

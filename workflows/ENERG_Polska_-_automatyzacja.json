@@ -1,0 +1,1905 @@
+{
+  "name": "ENERG Polska - automatyzacja",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "energ-zlecenia",
+        "options": {}
+      },
+      "id": "51b9488b-a353-4505-bd8d-33b80609933e",
+      "name": "Website Form Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -608,
+        176
+      ],
+      "webhookId": "9c9efa78-d6c8-4bba-9f5c-a840a4c9890f"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "imieNazwisko",
+              "value": "={{ $json.body.name ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "adresZamieszkania",
+              "value": "={{ $json.body.adresZamieszkania ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "kodPocztowy",
+              "value": "={{ $json.body.kodPocztowy ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "typUslugi",
+              "value": "={{ $json.body.interest ?? \"Nieznana\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "priorytet",
+              "value": "={{ $json.body.priorytet ?? \"Normalny\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "telefon",
+              "value": "={{ $json.body.phone ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "email",
+              "value": "={{ $json.body.email ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "zrodlo",
+              "value": "Strona WWW",
+              "type": "string"
+            },
+            {
+              "id": "9",
+              "name": "dataZgloszenia",
+              "value": "={{ $now.toFormat(\"yyyy-MM-dd\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6174e393-07a4-4fde-9138-35bef051913f",
+      "name": "Parse Webhook Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -400,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.adresZamieszkania }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "eaa6795f-2666-44d5-8e74-db9c586d3e28",
+      "name": "Check Address (Webhook)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -208,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://maps.googleapis.com/maps/api/geocode/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "address",
+              "value": "={{ $json.adresZamieszkania }}, {{ $json.kodPocztowy }}, Poland"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_GOOGLE_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e6f06253-ab6d-48b2-af72-7ba4bccb920e",
+      "name": "Geocode (Webhook)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "linkDoMapy",
+              "value": "={{ \"https://www.google.com/maps?q=\" + $json.results[0].geometry.location.lat + \",\" + $json.results[0].geometry.location.lng }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "status",
+              "value": "DO ZAPLANOWANIA",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "imieNazwisko",
+              "value": "={{ $(\"Parse Webhook Data\").item.json.imieNazwisko }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "adresZamieszkania",
+              "value": "={{ $(\"Parse Webhook Data\").item.json.adresZamieszkania }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "kodPocztowy",
+              "value": "={{ $(\"Parse Webhook Data\").item.json.kodPocztowy }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "typUslugi",
+              "value": "={{ $(\"Parse Webhook Data\").item.json.typUslugi }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "priorytet",
+              "value": "={{ $(\"Parse Webhook Data\").item.json.priorytet }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "zrodlo",
+              "value": "={{ $(\"Parse Webhook Data\").item.json.zrodlo }}",
+              "type": "string"
+            },
+            {
+              "id": "9",
+              "name": "dataZgloszenia",
+              "value": "={{ $(\"Parse Webhook Data\").item.json.dataZgloszenia }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c47a59bc-add3-47d4-96ea-6c23cc5edf20",
+      "name": "Extract Geo (Webhook)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "190f0d11-e861-4585-a749-a0e88e0d8e52",
+      "name": "Merge Webhook Geo",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        416,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "linkDoMapy",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "status",
+              "value": "Wymaga kontaktu",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "71c202d8-b721-4af9-bc5b-3374c32c95ac",
+      "name": "No Address (Webhook)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        112,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "idZlecenia",
+              "value": "={{ \"ENERG-\" + $now.toFormat(\"yyyy\") + \"-\" + Math.floor(Math.random() * 10000).toString().padStart(4, \"0\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "6f028697-ac67-4519-aa5e-40906e54091a",
+      "name": "Generate Job ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Pg8aW4VLSQa1RDmG_IpMwNNfb0RtZm5rZPTiy0ScnPE",
+          "mode": "list",
+          "cachedResultName": "Automatyzacja -ENERG Polska"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Imie i nazwisko": "={{ $json.imieNazwisko }}",
+            "Adres Zamieszkania": "={{ $json.adresZamieszkania }}",
+            "Kod pocztowy": "={{ $json.kodPocztowy }}",
+            "Typ Usługi": "={{ $json.typUslugi }}",
+            "Data zgłoszenia": "={{ $json.dataZgloszenia }}",
+            "źródło zgłoszenia": "={{ $json.zrodlo }}",
+            "Status": "={{ $json.status }}",
+            "Link do Mapy": "={{ $json.linkDoMapy }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Imie i nazwisko",
+              "displayName": "Imie i nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Adres Zamieszkania",
+              "displayName": "Adres Zamieszkania",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kod pocztowy",
+              "displayName": "Kod pocztowy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Typ Usługi",
+              "displayName": "Typ Usługi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data zgłoszenia",
+              "displayName": "Data zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "źródło zgłoszenia",
+              "displayName": "źródło zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link do Mapy",
+              "displayName": "Link do Mapy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "8e5673f4-78fc-46ee-954c-44c17bc11ecf",
+      "name": "Save Job to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        832,
+        176
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OnNXVVgF0pxfwNnP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1Pg8aW4VLSQa1RDmG_IpMwNNfb0RtZm5rZPTiy0ScnPE",
+          "mode": "list",
+          "cachedResultName": "Automatyzacja -ENERG Polska"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "52ea5660-1e54-40ff-9394-d2a05de98a56",
+      "name": "Manual Office Entry",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        448
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "GcOeVsNjnbZtJ785",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json[\"Status\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty"
+              }
+            },
+            {
+              "id": "2",
+              "leftValue": "={{ $json[\"Status\"] }}",
+              "rightValue": "Wymaga kontaktu",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "5191b87d-c275-44fb-ab78-c50f83b5fb54",
+      "name": "Only New Entries (no Status)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -256,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "imieNazwisko",
+              "value": "={{ $json[\"Imie i nazwisko\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "adresZamieszkania",
+              "value": "={{ $json[\"Adres Zamieszkania\"] ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "kodPocztowy",
+              "value": "={{ $json[\"Kod pocztowy\"] ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "typUslugi",
+              "value": "={{ $json[\"Typ Usługi\"] ?? \"Nieznana\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "priorytet",
+              "value": "={{ $json[\"Priorytet\"] ?? \"Normalny\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "zrodlo",
+              "value": "Biuro",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "dataZgloszenia",
+              "value": "={{ $now.toFormat(\"yyyy-MM-dd\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cd24b70c-bda4-49fb-b366-508f9872e901",
+      "name": "Parse Sheet Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -32,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.adresZamieszkania }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "6eb38280-da1c-4edf-859b-6790d1cc049a",
+      "name": "Check Address (Biuro)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://maps.googleapis.com/maps/api/geocode/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "address",
+              "value": "={{ $json.adresZamieszkania }}, {{ $json.kodPocztowy }}, Poland"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_GOOGLE_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2cd36ae5-13d0-4e91-99f8-b732100de15a",
+      "name": "Geocode (Biuro)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "linkDoMapy",
+              "value": "={{ \"https://www.google.com/maps?q=\" + $json.results[0].geometry.location.lat + \",\" + $json.results[0].geometry.location.lng }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "statusBiuro",
+              "value": "DO ZAPLANOWANIA",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "imieNazwisko",
+              "value": "={{ $(\"Parse Sheet Data\").item.json.imieNazwisko }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "dataZgloszenia",
+              "value": "={{ $(\"Parse Sheet Data\").item.json.dataZgloszenia }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b626a6ff-69bf-4f34-b864-7512aea04e5f",
+      "name": "Extract Geo (Biuro)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        336
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b0acb86f-3149-4f11-8203-b0e879793a30",
+      "name": "Merge Biuro Geo",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        800,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "linkDoMapy",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "statusBiuro",
+              "value": "Wymaga kontaktu",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "imieNazwisko",
+              "value": "={{ $json.imieNazwisko }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "dataZgloszenia",
+              "value": "={{ $json.dataZgloszenia }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3f2e07f8-a112-47ef-b889-e28161894eb9",
+      "name": "No Address (Biuro)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Pg8aW4VLSQa1RDmG_IpMwNNfb0RtZm5rZPTiy0ScnPE",
+          "mode": "list",
+          "cachedResultName": "Automatyzacja -ENERG Polska"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Imie i nazwisko": "={{ $json.imieNazwisko }}",
+            "Status": "={{ $json.statusBiuro }}",
+            "Link do Mapy": "={{ $json.linkDoMapy }}",
+            "źródło zgłoszenia": "Biuro",
+            "Data zgłoszenia": "={{ $json.dataZgloszenia }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Imie i nazwisko"
+          ],
+          "schema": [
+            {
+              "id": "Imie i nazwisko",
+              "displayName": "Imie i nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Adres Zamieszkania",
+              "displayName": "Adres Zamieszkania",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kod pocztowy",
+              "displayName": "Kod pocztowy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Typ Usługi",
+              "displayName": "Typ Usługi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Data zgłoszenia",
+              "displayName": "Data zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "źródło zgłoszenia",
+              "displayName": "źródło zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link do Mapy",
+              "displayName": "Link do Mapy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a429b507-103e-4e74-a0a0-ebc811bfa53f",
+      "name": "Update Biuro Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        944,
+        432
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OnNXVVgF0pxfwNnP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "id": "e8d98f40-83e9-494b-abb5-9bfae9b6a644",
+      "name": "Daily Schedule at 6 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -640,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Pg8aW4VLSQa1RDmG_IpMwNNfb0RtZm5rZPTiy0ScnPE",
+          "mode": "list",
+          "cachedResultName": "Automatyzacja -ENERG Polska"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "DO ZAPLANOWANIA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b290650f-97b6-4ae1-a180-e7da33f4142f",
+      "name": "Fetch Pending Jobs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -432,
+        624
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OnNXVVgF0pxfwNnP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "Adres Zamieszkania",
+              "order": "descending"
+            },
+            {
+              "fieldName": "Adres Zamieszkania"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "891df75c-58f6-44e4-bb38-d75cca1767be",
+      "name": "Sort by Priority & Location",
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map((item, index) => ({\n  json: { ...item.json, kolejnoscWTrasie: index + 1 }\n}));"
+      },
+      "id": "3a7d2f11-0996-46c4-b399-7b52e427566f",
+      "name": "Assign Route Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length === 0) {\n  return [{ json: { message: '📋 Plan montażu na dzisiaj:\\n\\nBrak zaplanowanych zleceń.' } }];\n}\nlet message = '📋 Plan montażu na ' + new Date().toLocaleDateString('pl-PL') + ':\\n\\n';\nitems.forEach((item) => {\n  const job = item.json;\n  message += job.kolejnoscWTrasie + '. ' + (job['Imie i nazwisko'] || 'Brak danych') + '\\n';\n  message += '   Adres: ' + (job['Adres Zamieszkania'] || '') + ' (' + (job['Kod pocztowy'] || '') + ')\\n';\n  message += '   Usługa: ' + (job['Typ Usługi'] || '') + '\\n';\n  message += '   Priorytet: ' + (job['Priorytet'] || 'Normalny') + '\\n';\n  message += '   Mapa: ' + (job['Link do Mapy'] || 'brak') + '\\n\\n';\n});\nmessage += '✅ Powodzenia w realizacji zleceń!';\nreturn [{ json: { message } }];"
+      },
+      "id": "64f8d93c-3b08-41c2-ad36-9de30431bce2",
+      "name": "Format Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "7912263345",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "af8a880f-31f3-40f3-a2f4-a45c19926dbe",
+      "name": "Send Daily Plan to Team",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        336,
+        624
+      ],
+      "webhookId": "026f6bff-fc00-406d-b4a0-7a5fba8603f8",
+      "credentials": {
+        "telegramApi": {
+          "id": "6XbASxMOywTLWFrr",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Pg8aW4VLSQa1RDmG_IpMwNNfb0RtZm5rZPTiy0ScnPE",
+          "mode": "list",
+          "cachedResultName": "Automatyzacja -ENERG Polska"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "ZAPLANOWANE",
+            "row_number": "={{ $json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Imie i nazwisko",
+              "displayName": "Imie i nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Adres Zamieszkania",
+              "displayName": "Adres Zamieszkania",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kod pocztowy",
+              "displayName": "Kod pocztowy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Typ Usługi",
+              "displayName": "Typ Usługi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Data zgłoszenia",
+              "displayName": "Data zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "źródło zgłoszenia",
+              "displayName": "źródło zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link do Mapy",
+              "displayName": "Link do Mapy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1962f01f-63fa-4bd2-ada9-f264f062e0bf",
+      "name": "Update Job Status to ZAPLANOWANE",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        800
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OnNXVVgF0pxfwNnP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "sender": "twoj-email@przyklad.pl"
+        },
+        "options": {}
+      },
+      "id": "83a90fa3-c2f5-4d35-8ad2-b85e77bacb9b",
+      "name": "Gmail - Pomiary",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -624,
+        -16
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DAVz5viTEqzLi9Kn",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Jesteś asystentem wyciągającym dane klientów z maili. Z poniższej treści maila wyciągnij dane i zwróć TYLKO i wyłącznie JSON bez żadnego dodatkowego tekstu, bez markdown, bez backticks.\n\nFormat JSON:\n{\n  \"imieNazwisko\": \"...\",\n  \"adresZamieszkania\": \"...\",\n  \"kodPocztowy\": \"...\",\n  \"typUslugi\": \"...\"\n}\n\nJeśli jakiegoś pola nie ma w treści maila, wstaw pusty string \"\".",
+              "role": "system"
+            },
+            {
+              "content": "={{ $json.text ?? $json.snippet ?? \"\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "27484ad8-cb74-4c7d-b7ec-3bef82dd9172",
+      "name": "Extract Client Data (AI)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -384,
+        -16
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "Fx01NjuIicDVXFrZ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.item.json.message.content;\nlet parsed;\ntry {\n  parsed = JSON.parse(content);\n} catch(e) {\n  parsed = { imieNazwisko: '', adresZamieszkania: '', kodPocztowy: '', typUslugi: '' };\n}\nreturn [{\n  json: {\n    imieNazwisko: parsed.imieNazwisko || '',\n    adresZamieszkania: parsed.adresZamieszkania || '',\n    kodPocztowy: parsed.kodPocztowy || '',\n    typUslugi: parsed.typUslugi || '',\n    zrodlo: 'Mail - Salon',\n    dataZgloszenia: new Date().toISOString().split('T')[0]\n  }\n}];"
+      },
+      "id": "4ab6172e-ad08-4b1b-87c5-de8a76789622",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.adresZamieszkania }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "9c4331d8-bab2-4d4e-971e-2ae6c609b745",
+      "name": "Check Address",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://maps.googleapis.com/maps/api/geocode/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "address",
+              "value": "={{ $json.adresZamieszkania }}, {{ $json.kodPocztowy }}, Poland"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_GOOGLE_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "351bcca9-3527-4f71-8ca7-8258efdfe9cf",
+      "name": "Geocode",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        464,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "OK",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "b25f025b-6923-41c5-904c-ec6c9ecd4bee",
+      "name": "Geocode OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        656,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "linkDoMapy",
+              "value": "={{ \"https://www.google.com/maps?q=\" + $json.results[0].geometry.location.lat + \",\" + $json.results[0].geometry.location.lng }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "status",
+              "value": "DO ZAPLANOWANIA",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "imieNazwisko",
+              "value": "={{ $(\"Parse AI Response\").item.json.imieNazwisko }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "adresZamieszkania",
+              "value": "={{ $(\"Parse AI Response\").item.json.adresZamieszkania }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "kodPocztowy",
+              "value": "={{ $(\"Parse AI Response\").item.json.kodPocztowy }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "typUslugi",
+              "value": "={{ $(\"Parse AI Response\").item.json.typUslugi }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "zrodlo",
+              "value": "={{ $(\"Parse AI Response\").item.json.zrodlo }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "dataZgloszenia",
+              "value": "={{ $(\"Parse AI Response\").item.json.dataZgloszenia }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4e4b2907-3f8e-4149-89e1-c2115b7f8fa6",
+      "name": "Extract Geo",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Pg8aW4VLSQa1RDmG_IpMwNNfb0RtZm5rZPTiy0ScnPE",
+          "mode": "list",
+          "cachedResultName": "Automatyzacja -ENERG Polska"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Arkusz1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Imie i nazwisko": "={{ $json.imieNazwisko }}",
+            "Adres Zamieszkania": "={{ $json.adresZamieszkania }}",
+            "Kod pocztowy": "={{ $json.kodPocztowy }}",
+            "Typ Usługi": "={{ $json.typUslugi }}",
+            "Data zgłoszenia": "={{ $json.dataZgloszenia }}",
+            "źródło zgłoszenia": "={{ $json.zrodlo }}",
+            "Status": "={{ $json.status }}",
+            "Link do Mapy": "={{ $json.linkDoMapy }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Imie i nazwisko",
+              "displayName": "Imie i nazwisko",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Adres Zamieszkania",
+              "displayName": "Adres Zamieszkania",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kod pocztowy",
+              "displayName": "Kod pocztowy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Typ Usługi",
+              "displayName": "Typ Usługi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data zgłoszenia",
+              "displayName": "Data zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "źródło zgłoszenia",
+              "displayName": "źródło zgłoszenia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link do Mapy",
+              "displayName": "Link do Mapy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "1a35f1d2-a012-4cec-91ef-3ad7edca3e25",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1072,
+        16
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OnNXVVgF0pxfwNnP",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "linkDoMapy",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "status",
+              "value": "Wymaga kontaktu",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "da83ecef-89a4-4074-904d-93e5b2f10df4",
+      "name": "Geocode Failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "linkDoMapy",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "status",
+              "value": "Wymaga kontaktu",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "b135df24-2a51-4253-aa27-749826f1ac79",
+      "name": "No Address",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        16
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Website Form Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Check Address (Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Address (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Geocode (Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Address (Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Extract Geo (Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Geo (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Merge Webhook Geo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Webhook Geo": {
+      "main": [
+        [
+          {
+            "node": "Generate Job ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Address (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Merge Webhook Geo",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Generate Job ID": {
+      "main": [
+        [
+          {
+            "node": "Save Job to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Office Entry": {
+      "main": [
+        [
+          {
+            "node": "Only New Entries (no Status)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only New Entries (no Status)": {
+      "main": [
+        [
+          {
+            "node": "Parse Sheet Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Sheet Data": {
+      "main": [
+        [
+          {
+            "node": "Check Address (Biuro)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Address (Biuro)": {
+      "main": [
+        [
+          {
+            "node": "Geocode (Biuro)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Address (Biuro)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode (Biuro)": {
+      "main": [
+        [
+          {
+            "node": "Extract Geo (Biuro)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Geo (Biuro)": {
+      "main": [
+        [
+          {
+            "node": "Merge Biuro Geo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Biuro Geo": {
+      "main": [
+        [
+          {
+            "node": "Update Biuro Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Address (Biuro)": {
+      "main": [
+        [
+          {
+            "node": "Merge Biuro Geo",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Daily Schedule at 6 PM": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pending Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pending Jobs": {
+      "main": [
+        [
+          {
+            "node": "Sort by Priority & Location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort by Priority & Location": {
+      "main": [
+        [
+          {
+            "node": "Assign Route Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign Route Order": {
+      "main": [
+        [
+          {
+            "node": "Format Telegram Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Job Status to ZAPLANOWANE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Send Daily Plan to Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Pomiary": {
+      "main": [
+        [
+          {
+            "node": "Extract Client Data (AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Client Data (AI)": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Check Address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Address": {
+      "main": [
+        [
+          {
+            "node": "Geocode",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode": {
+      "main": [
+        [
+          {
+            "node": "Geocode OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode OK?": {
+      "main": [
+        [
+          {
+            "node": "Extract Geo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Geocode Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Geo": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode Failed": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Address": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "3f68d450-647f-4e94-a178-fb7b78062cd4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "137501ae642560edd95a76486297d6e65c2c243dbdba68938b6b204fd0911415"
+  },
+  "id": "6BUtBABXTjGZeY1S",
+  "tags": []
+}
